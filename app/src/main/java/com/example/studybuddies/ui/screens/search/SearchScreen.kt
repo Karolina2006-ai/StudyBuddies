@@ -28,24 +28,25 @@ import com.example.studybuddies.viewmodel.SearchViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchScreen(
-    viewModel: SearchViewModel,
-    onTutorClick: (String) -> Unit
+    viewModel: SearchViewModel, // ViewModel managing search results and filter logic
+    onTutorClick: (String) -> Unit // Navigation callback when a tutor is selected
 ) {
+    // Observe the search state from the ViewModel
     val uiState by viewModel.uiState.collectAsState()
-    val logoBlue = Color(0xFF1A73E8)
-    val lightBlue = Color(0xFFEBF2FF)
+    val logoBlue = Color(0xFF1A73E8) // Primary branding color
+    val lightBlue = Color(0xFFEBF2FF) // Background color for search inputs
 
-    // --- FIX: Defining filter options here to avoid "Unresolved reference" ---
+    // Static lists for filter selection options
     val priceOptions = listOf("All prices", "Under 50 PLN", "50 - 100 PLN", "100+ PLN")
     val availabilityOptions = listOf("All", "Mornings", "Afternoons", "Evenings", "Weekends")
 
-    // Filter States
+    // Temporary states to hold filter changes before user clicks "Apply"
     var tempPrice by remember { mutableStateOf(uiState.selectedPriceRange) }
     var tempMode by remember { mutableStateOf(uiState.selectedMode) }
     var tempAvailability by remember { mutableStateOf(uiState.selectedAvailability) }
     var tempLocation by remember { mutableStateOf("") }
 
-    // Synchronize filters when the modal opens
+    // Sync temporary filter states when the filter sheet is opened
     LaunchedEffect(uiState.showFilters) {
         if (uiState.showFilters) {
             tempPrice = uiState.selectedPriceRange
@@ -57,12 +58,15 @@ fun SearchScreen(
 
     Scaffold(
         containerColor = Color.White,
+        modifier = Modifier.fillMaxSize(),
         topBar = {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .background(Color.White)
+                    .statusBarsPadding() // Ensures content starts below the status bar
                     .padding(horizontal = 16.dp)
-                    .padding(top = 48.dp, bottom = 8.dp)
+                    .padding(top = 16.dp, bottom = 8.dp)
             ) {
                 Text(
                     text = "Search for tutors",
@@ -76,6 +80,7 @@ fun SearchScreen(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    // Search bar for typing tutor names or subjects
                     OutlinedTextField(
                         value = uiState.searchQuery,
                         onValueChange = { viewModel.onSearchQueryChanged(it) },
@@ -93,12 +98,12 @@ fun SearchScreen(
                         ),
                         singleLine = true
                     )
+                    // Button to toggle the advanced filter bottom sheet
                     FilledTonalIconButton(
                         onClick = { viewModel.toggleFilters() },
                         modifier = Modifier.size(56.dp),
                         shape = RoundedCornerShape(12.dp),
-                        colors = IconButtonDefaults.filledTonalIconButtonColors(containerColor = lightBlue),
-                        interactionSource = remember { MutableInteractionSource() }
+                        colors = IconButtonDefaults.filledTonalIconButtonColors(containerColor = lightBlue)
                     ) {
                         Icon(Icons.Default.Tune, null, tint = logoBlue)
                     }
@@ -108,16 +113,17 @@ fun SearchScreen(
     ) { innerPadding ->
         LazyColumn(
             modifier = Modifier
-                .padding(innerPadding)
+                .fillMaxSize()
+                .background(Color.White)
                 .padding(horizontal = 16.dp),
-            contentPadding = PaddingValues(bottom = 24.dp)
+            contentPadding = PaddingValues(
+                top = innerPadding.calculateTopPadding() + 16.dp,
+                bottom = innerPadding.calculateBottomPadding() + 24.dp
+            )
         ) {
-            item { Spacer(modifier = Modifier.height(24.dp)) }
-
-            // Logic for "Recommended" (recently viewed/popular)
+            // Logic for "Recommended" tutors shown when no active search query exists
             val recommendedList = uiState.recentTutors.filter { it.uid != uiState.currentUserUid }
 
-            // Show recommendations only when not searching (empty query)
             if (uiState.searchQuery.isEmpty() && recommendedList.isNotEmpty()) {
                 item {
                     Text(
@@ -139,8 +145,7 @@ fun SearchScreen(
                 }
             }
 
-            // Main Results List
-            // Filtering to avoid duplicating recommendations (if not searching)
+            // Main filtered list logic, excluding the current user from results
             val listToShow = uiState.filteredTutors.filter { tutor ->
                 tutor.uid != uiState.currentUserUid &&
                         (uiState.searchQuery.isNotEmpty() || recommendedList.none { it.uid == tutor.uid })
@@ -151,7 +156,7 @@ fun SearchScreen(
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
-            // No Results Message
+            // Fallback message if the search yields no results
             if (listToShow.isEmpty() && uiState.searchQuery.isNotEmpty()) {
                 item {
                     Text(
@@ -163,7 +168,7 @@ fun SearchScreen(
             }
         }
 
-        // --- FILTERS (ModalBottomSheet) ---
+        // Modal Bottom Sheet for advanced filtering options
         if (uiState.showFilters) {
             ModalBottomSheet(
                 onDismissRequest = { viewModel.toggleFilters() },
@@ -173,11 +178,12 @@ fun SearchScreen(
                     modifier = Modifier
                         .padding(horizontal = 24.dp)
                         .padding(bottom = 24.dp)
+                        .navigationBarsPadding() // Respects system navigation bar space
                         .verticalScroll(rememberScrollState())
                 ) {
                     Text("Filters", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color.Black, modifier = Modifier.padding(bottom = 24.dp))
 
-                    // FIX: Using local priceOptions list
+                    // Price range selection dropdown
                     FilterDropdown("Price Range", tempPrice, priceOptions) { tempPrice = it }
 
                     Spacer(Modifier.height(16.dp))
@@ -188,18 +194,18 @@ fun SearchScreen(
                                 selected = (tempMode == mode),
                                 onClick = { tempMode = mode },
                                 label = { Text(mode) },
-                                interactionSource = remember { MutableInteractionSource() },
                                 colors = FilterChipDefaults.filterChipColors(selectedContainerColor = logoBlue, selectedLabelColor = Color.White)
                             )
                         }
                     }
                     Spacer(Modifier.height(16.dp))
 
-                    // FIX: Using local availabilityOptions list
+                    // Availability selection dropdown
                     FilterDropdown("Availability", tempAvailability, availabilityOptions) { tempAvailability = it }
 
                     Spacer(Modifier.height(16.dp))
                     Text("Location", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color.Black)
+                    // Input field for specific city/location filtering
                     OutlinedTextField(
                         value = tempLocation,
                         onValueChange = { tempLocation = it },
@@ -215,6 +221,7 @@ fun SearchScreen(
                     )
                     Spacer(Modifier.height(32.dp))
 
+                    // Button to submit the selected filters to the ViewModel
                     Button(
                         onClick = {
                             viewModel.updateFilters(
@@ -226,8 +233,7 @@ fun SearchScreen(
                         },
                         modifier = Modifier.fillMaxWidth().height(56.dp),
                         shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = logoBlue),
-                        interactionSource = remember { MutableInteractionSource() }
+                        colors = ButtonDefaults.buttonColors(containerColor = logoBlue)
                     ) {
                         Text("Apply Filters", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color.White)
                     }
@@ -240,7 +246,7 @@ fun SearchScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FilterDropdown(label: String, selected: String, options: List<String>, onSelected: (String) -> Unit) {
-    var expanded by remember { mutableStateOf(false) }
+    var expanded by remember { mutableStateOf(false) } // Controls dropdown visibility
 
     Column {
         Text(label, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color.Black, modifier = Modifier.padding(bottom = 8.dp))
@@ -251,7 +257,7 @@ fun FilterDropdown(label: String, selected: String, options: List<String>, onSel
             OutlinedTextField(
                 value = selected,
                 onValueChange = {},
-                readOnly = true,
+                readOnly = true, // User selects from menu rather than typing
                 modifier = Modifier.fillMaxWidth().menuAnchor(),
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                 shape = RoundedCornerShape(12.dp),
@@ -293,10 +299,11 @@ fun TutorSearchCard(tutor: User, onClick: (String) -> Unit) {
             ) { onClick(tutor.uid) },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        border = BorderStroke(1.dp, logoBlue.copy(alpha = 0.5f)),
+        border = BorderStroke(1.dp, logoBlue.copy(alpha = 0.5f)), // Subtle blue border
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            // Profile image container with fallback to initials
             Box(
                 modifier = Modifier.size(65.dp).clip(CircleShape).background(Color(0xFFF0F5FF)),
                 contentAlignment = Alignment.Center

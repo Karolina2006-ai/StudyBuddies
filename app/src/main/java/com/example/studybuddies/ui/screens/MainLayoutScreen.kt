@@ -26,47 +26,47 @@ import com.example.studybuddies.viewmodel.*
  */
 @Composable
 fun MainLayoutScreen(
-    authViewModel: AuthViewModel,
-    homeViewModel: HomeViewModel,
-    searchViewModel: SearchViewModel,
-    lessonsViewModel: LessonsViewModel,
-    chatViewModel: ChatViewModel,
-    tutorProfileViewModel: TutorProfileViewModel,
-    navController: NavHostController, // Parent controller
-    onLogout: () -> Unit
+    authViewModel: AuthViewModel, // Managing user login state and session data
+    homeViewModel: HomeViewModel, // Handling the dashboard and personalized content
+    searchViewModel: SearchViewModel, // Logic for finding tutors and filtering results
+    lessonsViewModel: LessonsViewModel, // Controlling the scheduling and booking flow
+    chatViewModel: ChatViewModel, // Managing real-time messaging and chat history
+    tutorProfileViewModel: TutorProfileViewModel, // Handling details for the tutor view
+    navController: NavHostController, // The top-level controller for global app navigation
+    onLogout: () -> Unit // Action to trigger when the student decides to log out
 ) {
     // This controller manages the switching of screens within the Bottom Tabs
-    val bottomNavController = rememberNavController()
-    val navBackStackEntry by bottomNavController.currentBackStackEntryAsState()
-    val currentRoute = navBackStackEntry?.destination?.route
+    val bottomNavController = rememberNavController() // Internal controller for the bottom menu
+    val navBackStackEntry by bottomNavController.currentBackStackEntryAsState() // Tracking the current screen
+    val currentRoute = navBackStackEntry?.destination?.route // Getting the name of the current route
 
-    val logoBlue = Color(0xFF1A73E8)
-    val lightBlueUnselected = Color(0xFF90CAF9)
+    val logoBlue = Color(0xFF1A73E8) // Professional blue used for active selections
+    val lightBlueUnselected = Color(0xFF90CAF9) // Lighter blue for inactive icons
 
     // GLOBAL REFRESH: Ensures that data is fresh when entering the main authenticated area.
     // The use of LaunchedEffect(Unit) prevents unnecessary re-triggers.
     LaunchedEffect(Unit) {
-        authViewModel.refreshUser()
-        homeViewModel.refreshData()
-        lessonsViewModel.loadLessons() // Ensuring lessons listener is active immediately
+        authViewModel.refreshUser() // Update local user info from Firebase
+        homeViewModel.refreshData() // Pull the latest dashboard updates
+        lessonsViewModel.loadLessons() // Start the listener for scheduled sessions
     }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
-        containerColor = Color.White,
+        containerColor = Color.White, // Clean white background for the whole app
         bottomBar = {
-            // Logic to hide the BottomBar on specific detail/edit screens
+            // Logic to hide the BottomBar on specific detail/edit screens for better focus
             if (currentRoute?.startsWith("chat_detail") != true &&
                 currentRoute?.startsWith("tutor_profile") != true &&
                 currentRoute != "edit_profile") {
 
                 Surface(
-                    modifier = Modifier.fillMaxWidth().navigationBarsPadding(),
+                    modifier = Modifier.fillMaxWidth().navigationBarsPadding(), // Ensures it stays above system buttons
                     color = Color.White,
                     tonalElevation = 0.dp
                 ) {
                     Column {
-                        // Brand separator line
+                        // Brand separator line to visually divide content from navigation
                         Box(modifier = Modifier.fillMaxWidth().height(0.5.dp).background(Color(0xFFEEEEEE)))
 
                         NavigationBar(
@@ -74,7 +74,7 @@ fun MainLayoutScreen(
                             containerColor = Color.White,
                             tonalElevation = 0.dp
                         ) {
-                            // Order: Chats, Lessons, Home, Search, Profile
+                            // Order of navigation: Chats, Lessons, Home, Search, Profile
                             val items = listOf(
                                 Triple("chats", "Messages", Icons.Default.Chat),
                                 Triple("lessons", "Lessons", Icons.Default.DateRange),
@@ -84,9 +84,9 @@ fun MainLayoutScreen(
                             )
 
                             items.forEach { (route, label, icon) ->
-                                val selected = currentRoute == route
+                                val selected = currentRoute == route // Checking if this tab is active
 
-                                // PROFESSIONAL ICON LIFT ANIMATION
+                                // PROFESSIONAL ICON LIFT ANIMATION: Moves the icon up slightly when tapped
                                 val iconYOffset by animateDpAsState(
                                     targetValue = if (selected) (-6).dp else 0.dp,
                                     animationSpec = tween(durationMillis = 300),
@@ -100,26 +100,27 @@ fun MainLayoutScreen(
                                             contentDescription = label,
                                             modifier = Modifier
                                                 .size(26.dp)
-                                                .offset(y = iconYOffset)
+                                                .offset(y = iconYOffset) // Applying the lift effect
                                         )
                                     },
-                                    label = { },
+                                    label = { }, // Keeping UI clean by not showing text labels
                                     selected = selected,
                                     onClick = {
                                         if (currentRoute != route) {
                                             bottomNavController.navigate(route) {
+                                                // Avoid building up a large stack of destinations
                                                 popUpTo(bottomNavController.graph.findStartDestination().id) {
-                                                    saveState = true
+                                                    saveState = true // Keep screen data when switching away
                                                 }
-                                                launchSingleTop = true
-                                                restoreState = true
+                                                launchSingleTop = true // Don't open the same screen twice
+                                                restoreState = true // Return to the same scroll position
                                             }
                                         }
                                     },
                                     colors = NavigationBarItemDefaults.colors(
-                                        selectedIconColor = logoBlue,
-                                        unselectedIconColor = lightBlueUnselected,
-                                        indicatorColor = Color.Transparent
+                                        selectedIconColor = logoBlue, // Blue for active tab
+                                        unselectedIconColor = lightBlueUnselected, // Gray-blue for idle tabs
+                                        indicatorColor = Color.Transparent // Removing the default background oval
                                     ),
                                     interactionSource = remember { MutableInteractionSource() }
                                 )

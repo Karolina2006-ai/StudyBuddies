@@ -1,12 +1,16 @@
 package com.example.studybuddies
 
+import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.IndicationNodeFactory
@@ -20,6 +24,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.ContentDrawScope
 import androidx.compose.ui.node.DelegatableNode
 import androidx.compose.ui.node.DrawModifierNode
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -54,8 +60,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // --- KROK 3: REJESTRACJA KANAŁU POWIADOMIEŃ ---
-        // To jest wymagane dla Androida 8.0+, aby powiadomienia w ogóle się pokazały.
+        // --- STEP: NOTIFICATION CHANNEL REGISTRATION ---
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channelId = "lessons_channel"
             val channelName = "Lesson Reminders"
@@ -68,7 +73,6 @@ class MainActivity : ComponentActivity() {
             val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             notificationManager.createNotificationChannel(channel)
         }
-        // --------------------------------------------------
 
         // Initialize Firebase instances and Repositories
         val auth = FirebaseAuth.getInstance()
@@ -85,8 +89,7 @@ class MainActivity : ComponentActivity() {
                     modelClass.isAssignableFrom(HomeViewModel::class.java) -> HomeViewModel(userRepository) as T
                     modelClass.isAssignableFrom(SearchViewModel::class.java) -> SearchViewModel(userRepository) as T
 
-                    // --- ZMIANA DLA KROKU 4 ---
-                    // Przekazujemy 'application' do LessonsViewModel, aby mógł obsługiwać AlarmManager
+                    // Pass 'application' context to LessonsViewModel for system services access
                     modelClass.isAssignableFrom(LessonsViewModel::class.java) -> LessonsViewModel(application, userRepository, auth) as T
 
                     modelClass.isAssignableFrom(ChatViewModel::class.java) -> ChatViewModel(userRepository) as T
@@ -99,6 +102,25 @@ class MainActivity : ComponentActivity() {
         setContent {
             StudyBuddiesTheme {
                 CompositionLocalProvider(LocalIndication provides NoIndication) {
+
+                    // --- NOTIFICATION PERMISSION REQUEST LOGIC ---
+                    val context = LocalContext.current
+
+                    // Launcher to trigger the system "Allow notifications" dialog at startup
+                    val launcher = rememberLauncherForActivityResult(
+                        contract = ActivityResultContracts.RequestPermission(),
+                        onResult = { /* Choice is managed by the system */ }
+                    )
+
+                    // Check if Android 13+ (Tiramisu) and if permission is required
+                    LaunchedEffect(Unit) {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                                launcher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                            }
+                        }
+                    }
+
                     val authViewModel: AuthViewModel = viewModel(factory = viewModelFactory)
                     val authState by authViewModel.authState.collectAsStateWithLifecycle()
 

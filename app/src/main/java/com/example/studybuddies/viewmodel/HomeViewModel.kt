@@ -17,40 +17,42 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+// Defines the complete visual state of the Home Screen
 data class HomeUiState(
-    val recommendedTutors: List<User> = emptyList(),
-    val upcomingLessons: List<Lesson> = emptyList(),
-    val isLoading: Boolean = false,
-    val userName: String = ""
+    val recommendedTutors: List<User> = emptyList(), // List of suggested teachers
+    val upcomingLessons: List<Lesson> = emptyList(), // The student's next scheduled sessions
+    val isLoading: Boolean = false, // Controls the visibility of the loading spinner
+    val userName: String = "" // Personalized greeting (e.g., "Hello, Mark!")
 )
 
 class HomeViewModel(
-    private val userRepository: UserRepository
+    private val userRepository: UserRepository // Handles database access for user/tutor profiles
 ) : ViewModel() {
 
     private val auth = FirebaseAuth.getInstance()
     private val firestore = FirebaseFirestore.getInstance()
 
-    // --- STAN UI ---
+    // --- UI STATE MANAGEMENT ---
+    // Mutable internal state and immutable public flow for UI observation
     private val _uiState = MutableStateFlow(HomeUiState(isLoading = true))
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
-    private var lessonsListener: ListenerRegistration? = null
+    private var lessonsListener: ListenerRegistration? = null // Reference to the active Firebase listener
 
-    // Strażnik sesji
+    // Session Guardian: Reacts whenever the user logs in or out
     private val authStateListener = FirebaseAuth.AuthStateListener { firebaseAuth ->
         val uid = firebaseAuth.currentUser?.uid
         if (uid != null) {
-            // Uruchamiamy dwa NIEZALEŻNE procesy.
-            // Jeśli jeden zwolni, drugi i tak zaktualizuje ekran.
-            observeLessonsRealtime(uid)     // 1. Lekcje (Szybkie)
-            loadUserProfileAndTutors(uid)   // 2. Tutorzy (Wolniejsi)
+            // Trigger two INDEPENDENT processes.
+            // If one is slow, the other still updates the screen immediately.
+            observeLessonsRealtime(uid)     // 1. Lessons (Fast & Critical)
+            loadUserProfileAndTutors(uid)   // 2. Tutors (Background/Static)
         }
     }
 
     init {
         auth.addAuthStateListener(authStateListener)
-        // Próba startu na wypadek, gdyby user już był zalogowany
+        // Check for existing session on startup
         auth.currentUser?.uid?.let { uid ->
             observeLessonsRealtime(uid)
             loadUserProfileAndTutors(uid)
@@ -58,12 +60,11 @@ class HomeViewModel(
     }
 
     /**
-     * PROCES 1: LEKCJE (Krytyczny dla Ciebie)
-     * Aktualizuje UI natychmiast po otrzymaniu danych z bazy.
-     * Nie czeka na nic innego.
+     * PROCESS 1: REAL-TIME LESSONS
+     * Updates the UI immediately upon receiving database changes.
      */
     private fun observeLessonsRealtime(uid: String) {
-        lessonsListener?.remove()
+        lessonsListener?.remove() // Clean up any old listeners before starting a new one
 
         lessonsListener = firestore.collection("lessons")
             .addSnapshotListener { snapshot, e ->
@@ -73,38 +74,38 @@ class HomeViewModel(
                 }
 
                 if (snapshot != null) {
+                    // Convert raw documents to Lesson objects
                     val allLessons = snapshot.documents.mapNotNull { it.toObject(Lesson::class.java) }
 
-                    // FILTR 1:1 Z LESSONS VIEW MODEL (BEZPIECZNY)
-                    // Bierzemy wszystko, co należy do użytkownika.
+                    // Safety Filter: Only include lessons where the user is a participant
                     val myLessons = allLessons.filter { lesson ->
                         val isParticipant = (lesson.studentId == uid || lesson.tutorId == uid)
-                        // Nie filtrujemy po dacie ani statusie, żeby mieć pewność, że się pojawi
                         val isActive = (lesson.status == "Confirmed" || lesson.status == "Upcoming" || lesson.status == "Pending")
                         isParticipant && isActive
                     }
                         .sortedBy { it.date }
-                        .take(5)
+                        .take(5) // Only show the top 5 to keep the dashboard clean
 
-                    // NATYCHMIASTOWA AKTUALIZACJA UI
+                    // PUSH TO UI: Instantly updates the screen
                     _uiState.update {
                         it.copy(
                             upcomingLessons = myLessons,
-                            isLoading = false // Wyłączamy loader, bo mamy lekcje!
+                            isLoading = false // Turn off loader as soon as lessons arrive
                         )
                     }
-                    Log.d("HomeVM", "Lekcje zaktualizowane: ${myLessons.size}")
+                    Log.d("HomeVM", "Lessons updated: ${myLessons.size}")
                 }
             }
     }
 
     /**
-     * PROCES 2: DANE STATYCZNE (Tutorzy, Profil)
-     * Działa w tle, nie blokuje lekcji.
+     * PROCESS 2: STATIC DATA (Tutors, Profile)
+     * Runs in the background without blocking the lesson stream.
      */
     private fun loadUserProfileAndTutors(uid: String) {
         viewModelScope.launch {
             try {
+                // Perform heavy database work on the IO thread
                 withContext(Dispatchers.IO) {
                     val profile = userRepository.getUserProfile(uid)
                     val name = profile?.firstName ?: "Study Buddy"
@@ -114,10 +115,10 @@ class HomeViewModel(
                         val roleClean = user.role.trim()
                         val isRoleTutor = roleClean.equals("Tutor", ignoreCase = true)
                         val isNotMe = user.uid != uid
-                        isRoleTutor && isNotMe
+                        isRoleTutor && isNotMe // Exclude current user from recommendations
                     }
 
-                    // Aktualizacja UI niezależna od lekcji
+                    // Update UI independently of the lesson stream
                     _uiState.update {
                         it.copy(
                             userName = name,
@@ -126,14 +127,15 @@ class HomeViewModel(
                     }
                 }
             } catch (e: Exception) {
-                Log.e("HomeVM", "Błąd profilu", e)
+                Log.e("HomeVM", "Profile error", e)
             } finally {
-                // Upewniamy się, że loader znika
+                // Ensure loader is hidden even if an error occurs
                 _uiState.update { it.copy(isLoading = false) }
             }
         }
     }
 
+    // Manual refresh trigger (e.g., Pull-to-refresh)
     fun refreshData() {
         val uid = auth.currentUser?.uid
         if (uid != null) {
@@ -142,6 +144,7 @@ class HomeViewModel(
         }
     }
 
+    // Clears the screen state when logging out
     fun clearData() {
         lessonsListener?.remove()
         _uiState.value = HomeUiState(isLoading = true)
@@ -149,6 +152,7 @@ class HomeViewModel(
 
     override fun onCleared() {
         super.onCleared()
+        // Critical: Detach listeners to prevent memory leaks
         auth.removeAuthStateListener(authStateListener)
         lessonsListener?.remove()
     }

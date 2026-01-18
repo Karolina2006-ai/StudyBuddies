@@ -26,19 +26,19 @@ import kotlinx.coroutines.launch
  */
 @Composable
 fun BlueWelcomeScreen(
-    onAnimationFinished: () -> Unit
+    onAnimationFinished: () -> Unit // Callback to notify the parent when the intro is done
 ) {
-    val logoBlue = Color(0xFF1A73E8)
+    val logoBlue = Color(0xFF1A73E8) // Standard Google-style blue for branding
 
-    val scale = remember { Animatable(0.4f) }
-    val alpha = remember { Animatable(0f) }
-    var displayedText by remember { mutableStateOf("") }
+    val scale = remember { Animatable(0.4f) } // Starting scale for the mascot (small)
+    val alpha = remember { Animatable(0f) } // Starting transparency (invisible)
+    var displayedText by remember { mutableStateOf("") } // Reactive state for the typewriter effect
 
-    // CHANGE: Newline character "\n" splits the text
+    // The slogan split with a newline for professional two-line display
     val fullText = "Studying made\nsimple!"
 
     LaunchedEffect(Unit) {
-        // Run logo animations in parallel
+        // Run logo animations in parallel for a smooth entrance
         launch {
             scale.animateTo(
                 targetValue = 1f,
@@ -52,16 +52,16 @@ fun BlueWelcomeScreen(
             )
         }
 
-        // Wait for logo to settle, then type the text
+        // Wait for the logo entrance to settle, then start typing the text
         delay(800)
         fullText.forEachIndexed { index, _ ->
             displayedText = fullText.substring(0, index + 1)
-            delay(50) // Typing speed
+            delay(50) // Controls the speed of the typing effect
         }
 
-        // Hold the screen for a moment before navigating away
+        // Hold the screen for a moment so the student can read the full slogan
         delay(1500)
-        onAnimationFinished()
+        onAnimationFinished() // Trigger navigation to the next screen
     }
 
     Box(
@@ -80,20 +80,20 @@ fun BlueWelcomeScreen(
                 contentDescription = "Study Buddy Mascot",
                 modifier = Modifier
                     .size(280.dp)
-                    .scale(scale.value)
-                    .alpha(alpha.value)
+                    .scale(scale.value) // Linked to the animated scale state
+                    .alpha(alpha.value) // Linked to the animated alpha state
             )
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // CHANGE: Professional text styling
+            // Styled text with typewriter logic applied
             Text(
                 text = displayedText,
                 color = Color.White,
                 fontSize = 36.sp,
                 fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center, // Centers both lines of text
-                lineHeight = 44.sp // Line height - prevents letters from overlapping
+                textAlign = TextAlign.Center, // Centers both lines horizontally
+                lineHeight = 44.sp // Ensures comfortable spacing between the two lines
             )
         }
     }

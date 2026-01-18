@@ -40,42 +40,42 @@ import java.util.Locale
  */
 @Composable
 fun HomeScreen(
-    homeViewModel: HomeViewModel,
-    lessonsViewModel: LessonsViewModel,
-    onTutorClick: (String) -> Unit
+    homeViewModel: HomeViewModel, // This VM handles my user info and the recommendations
+    lessonsViewModel: LessonsViewModel, // This VM is just for my calendar/lessons data
+    onTutorClick: (String) -> Unit // What happens when I tap a tutor's profile
 ) {
-    // 1. Pobieramy stan z HomeViewModel (tylko dla Imienia i Tutorów)
+    // Getting the latest UI state for the user's name and recommended list
     val uiState by homeViewModel.uiState.collectAsStateWithLifecycle()
 
-    // 2. Pobieramy lekcje z działającego LessonsViewModel
+    // Listening to the lessons list so it updates automatically if one gets booked or cancelled
     val allLessons by lessonsViewModel.lessons.collectAsStateWithLifecycle()
 
-    val logoBlue = Color(0xFF1A73E8)
-    val currentUserId = remember { FirebaseAuth.getInstance().currentUser?.uid }
+    val logoBlue = Color(0xFF1A73E8) // Our main brand color
+    val currentUserId = remember { FirebaseAuth.getInstance().currentUser?.uid } // Getting my unique ID from Firebase
 
-    // 3. SORTOWANIE CHRONOLOGICZNE (Poprawione)
-    // Zamiast alfabetycznie, zamieniamy stringi na daty i sortujemy od najwcześniejszej.
+    // This block sorts the lessons so the one happening soonest is at the start
     val homeScreenLessons = remember(allLessons) {
+        // Defining how to read the date and time strings from the database
         val formatter = DateTimeFormatter.ofPattern("MMM d, yyyy h:mm a", Locale.US)
 
         allLessons
             .filter {
-                // Pokazujemy tylko te, które nie są w przeszłości i nie są anulowane
+                // Only show lessons that haven't happened yet and aren't cancelled
                 !it.isPast() && it.status != "Cancelled"
             }
             .sortedBy { lesson ->
                 try {
-                    // Łączymy datę i godzinę, żeby sortować precyzyjnie
+                    // Combine date and time into one object so we can sort them properly
                     LocalDateTime.parse("${lesson.date} ${lesson.time}", formatter)
                 } catch (e: Exception) {
-                    // W razie błędu formatu, dajemy na koniec listy
+                    // If the date looks weird, throw it to the very end of the list
                     LocalDateTime.MAX
                 }
             }
-            .take(5)
+            .take(5) // Just show the top 5 so the home screen isn't too cluttered
     }
 
-    // Loading State
+    // Checking if the app is still fetching data from the server
     if (uiState.isLoading) {
         Box(
             modifier = Modifier
@@ -83,6 +83,7 @@ fun HomeScreen(
                 .background(Color.White),
             contentAlignment = Alignment.Center
         ) {
+            // Show a loading spinner while we wait
             CircularProgressIndicator(color = logoBlue)
         }
     } else {
@@ -90,13 +91,14 @@ fun HomeScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color.White)
-                .statusBarsPadding(),
-            contentPadding = PaddingValues(bottom = 100.dp)
+                .statusBarsPadding(), // Keeps the content from hiding under the clock/notches
+            contentPadding = PaddingValues(bottom = 100.dp) // Extra space at the bottom for the nav bar
         ) {
             // --- GREETING SECTION ---
             item {
                 Column(modifier = Modifier.padding(horizontal = 24.dp, vertical = 24.dp)) {
                     Text(
+                        // If the name is missing, just say Hello Buddy!
                         text = "Hello, ${uiState.userName.ifEmpty { "Study Buddy" }}!",
                         fontSize = 28.sp,
                         fontWeight = FontWeight.ExtraBold,
@@ -121,6 +123,7 @@ fun HomeScreen(
                     modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
                 )
 
+                // If no lessons are scheduled, show a simple text message
                 if (homeScreenLessons.isEmpty()) {
                     Text(
                         text = "No upcoming lessons yet.",
@@ -132,17 +135,19 @@ fun HomeScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState())
+                            .horizontalScroll(rememberScrollState()) // Allow swiping left/right through lessons
                             .padding(horizontal = 24.dp, vertical = 8.dp),
                         horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         homeScreenLessons.forEach { lesson ->
+                            // If I am the tutor, show the student's name, otherwise show the tutor's name
                             val displayPartnerName = if (lesson.tutorId == currentUserId) {
                                 lesson.studentName
                             } else {
                                 lesson.tutorName
                             }
 
+                            // Creating the actual card for each lesson
                             LessonHomeCard(
                                 subject = lesson.subject.ifEmpty { "Lesson" },
                                 tutor = displayPartnerName.ifEmpty { "User" },
@@ -165,6 +170,7 @@ fun HomeScreen(
                 )
             }
 
+            // If there's nobody to recommend yet
             if (uiState.recommendedTutors.isEmpty()) {
                 item {
                     Text(
@@ -174,9 +180,10 @@ fun HomeScreen(
                     )
                 }
             } else {
+                // Loop through the recommended tutors list and create a card for each
                 items(
                     items = uiState.recommendedTutors,
-                    key = { it.uid }
+                    key = { it.uid } // Help Compose identify each item uniquely for better performance
                 ) { tutor ->
                     TutorHomeCard(tutor, logoBlue, onTutorClick)
                 }
@@ -189,12 +196,12 @@ fun HomeScreen(
 fun LessonHomeCard(subject: String, tutor: String, time: String, color: Color) {
     Card(
         modifier = Modifier
-            .width(260.dp)
+            .width(260.dp) // Fixed width so cards can be swiped horizontally
             .height(140.dp),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        border = BorderStroke(1.dp, color.copy(alpha = 0.2f))
+        border = BorderStroke(1.dp, color.copy(alpha = 0.2f)) // Subtly colored border
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -202,6 +209,7 @@ fun LessonHomeCard(subject: String, tutor: String, time: String, color: Color) {
         ) {
             Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
                 Text(subject, fontWeight = FontWeight.Bold, fontSize = 18.sp, color = color, maxLines = 1)
+                // A little badge that says "TODAY" or "SOON"
                 Surface(color = color.copy(alpha = 0.1f), shape = RoundedCornerShape(8.dp)) {
                     Text(
                         text = if(time.contains("Today")) "TODAY" else "SOON",
@@ -216,6 +224,7 @@ fun LessonHomeCard(subject: String, tutor: String, time: String, color: Color) {
                 Text("with $tutor", fontSize = 14.sp, color = Color.Black, maxLines = 1)
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    // Clock icon for the time
                     Icon(Icons.Default.AccessTime, null, tint = color, modifier = Modifier.size(14.dp))
                     Spacer(Modifier.width(4.dp))
                     Text(time, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = Color.Black, maxLines = 1)
@@ -233,7 +242,7 @@ fun TutorHomeCard(tutor: User, color: Color, onClick: (String) -> Unit) {
             .padding(horizontal = 24.dp, vertical = 8.dp)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
-                indication = null
+                indication = null // Disabling the ripple effect for a cleaner feel
             ) { onClick(tutor.uid) },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -244,6 +253,7 @@ fun TutorHomeCard(tutor: User, color: Color, onClick: (String) -> Unit) {
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // Avatar Container
             Box(
                 modifier = Modifier
                     .size(60.dp)
@@ -251,6 +261,7 @@ fun TutorHomeCard(tutor: User, color: Color, onClick: (String) -> Unit) {
                     .background(Color(0xFFF0F5FF)),
                 contentAlignment = Alignment.Center
             ) {
+                // If they have a picture, load it. Otherwise, show their initials.
                 if (!tutor.profileImageUri.isNullOrEmpty()) {
                     AsyncImage(
                         model = tutor.profileImageUri,
@@ -265,17 +276,21 @@ fun TutorHomeCard(tutor: User, color: Color, onClick: (String) -> Unit) {
 
             Spacer(modifier = Modifier.width(16.dp))
 
+            // Tutor Details
             Column(modifier = Modifier.weight(1f)) {
                 Text(tutor.fullName, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color.Black)
                 Text(tutor.subjects.firstOrNull() ?: "Tutor", color = Color.Black, fontSize = 13.sp)
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    // Little pin icon for their location
                     Icon(Icons.Default.LocationOn, null, tint = color, modifier = Modifier.size(12.dp))
                     Text(tutor.city, color = Color.Black, fontSize = 12.sp)
                 }
             }
 
+            // Rating and Reviews Section
             Column(horizontalAlignment = Alignment.End) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    // Golden star icon for rating
                     Icon(Icons.Default.Star, null, tint = Color(0xFFFFC107), modifier = Modifier.size(16.dp))
                     Text(String.format("%.1f", tutor.averageRating), fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color.Black)
                 }

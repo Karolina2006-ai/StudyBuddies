@@ -10,7 +10,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 
 /**
  * Dependency Injection Container for the entire StudyBuddies application.
- * Responsible for providing instances of repositories and the ViewModel factory.
+ * This interface defines what the app needs to function.
  */
 interface AppContainer {
     val authRepository: AuthRepository
@@ -18,17 +18,21 @@ interface AppContainer {
     val viewModelFactory: AppViewModelFactory
 }
 
-// ZMIANA: Dodajemy 'context' do konstruktora, aby móc przekazać go do fabryki
+/**
+ * The actual implementation of the container.
+ * It's like a 'factory of factories' that creates everything in the right order.
+ */
 class DefaultAppContainer(private val context: Context) : AppContainer {
 
-    // 1. Initialization of Firebase services (Container-scoped Singletons)
+    // 1. We create single instances of Firebase services here.
+    // This ensures we aren't opening 50 different connections to the database.
     private val firebaseAuth: FirebaseAuth = FirebaseAuth.getInstance()
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
 
     /**
      * Auth Repository.
-     * We use the AuthRepository class, passing Auth and Firestore instances to it.
-     * This allows for simultaneous account creation and profile creation in the database.
+     * 'by lazy' means this won't be created until the very second it's actually needed.
+     * This saves memory during app startup.
      */
     override val authRepository: AuthRepository by lazy {
         AuthRepository(firebaseAuth, firestore)
@@ -36,7 +40,7 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
 
     /**
      * User Repository.
-     * Handles profile, lessons, tutor tiles, and messages.
+     * We pass the shared 'firestore' instance so it's consistent with AuthRepository.
      */
     override val userRepository: UserRepository by lazy {
         UserRepository(firestore)
@@ -44,12 +48,11 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
 
     /**
      * ViewModel Factory.
-     * Passes ready-made repositories to all ViewModels in the application.
-     * This guarantees that tutor tiles in Home and Search use the exact same database connection.
+     * This is the bridge between our data (Repositories) and our UI (ViewModels).
      */
     override val viewModelFactory: AppViewModelFactory by lazy {
-        // NAPRAWA: Przekazujemy 'application' jako pierwszy argument,
-        // ponieważ LessonsViewModel teraz tego wymaga do powiadomień.
+        // We cast the context to 'Application' because some ViewModels (like Lessons)
+        // need the application context to trigger system-level things like notifications.
         AppViewModelFactory(
             context.applicationContext as Application,
             authRepository,

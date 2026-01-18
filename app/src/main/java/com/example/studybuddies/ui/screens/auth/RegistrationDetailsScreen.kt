@@ -23,6 +23,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -40,19 +41,23 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun RegistrationDetailsScreen(
-    role: String,
-    viewModel: AuthViewModel,
-    onNavigateToLogin: () -> Unit,
-    onRegistrationSuccess: () -> Unit,
-    onBack: () -> Unit
+    role: String, // Whether the user is a Tutor or Student
+    viewModel: AuthViewModel, // Handles Firebase Auth logic
+    onNavigateToLogin: () -> Unit, // Back to login screen
+    onRegistrationSuccess: () -> Unit, // Callback for successful signup
+    onBack: () -> Unit // Go back to Role Selection
 ) {
+    // Observing state from ViewModel to handle loading/errors
     val authState by viewModel.authState.collectAsStateWithLifecycle()
+
+    // UI Constants for branding
     val logoBlue = Color(0xFF1A73E8)
     val lightBlueBg = Color(0xFFF0F5FF)
     val fieldTextSize = 14.sp
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
+    // Local UI State for form inputs
     var firstName by remember { mutableStateOf("") }
     var surname by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
@@ -65,8 +70,10 @@ fun RegistrationDetailsScreen(
     var hobbiesAndInterests by remember { mutableStateOf("") }
     var selectedSubjects by remember { mutableStateOf(setOf<String>()) }
 
+    // Pre-defined list for subject chips
     val subjectsList = listOf("Mathematics", "Physics", "Chemistry", "Biology", "English", "History", "Computer Science")
 
+    // Image Picker Setup: Standard Android contract for selecting content
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -76,12 +83,13 @@ fun RegistrationDetailsScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.White)
-            .verticalScroll(rememberScrollState())
+            .verticalScroll(rememberScrollState()) // Necessary for long forms
             .padding(horizontal = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Spacer(modifier = Modifier.height(36.dp))
 
+        // Back button navigation logic
         Box(modifier = Modifier.fillMaxWidth()) {
             IconButton(
                 onClick = onBack,
@@ -95,6 +103,7 @@ fun RegistrationDetailsScreen(
         Text("Complete your profile", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = logoBlue)
         Text("Registering as a $role", color = Color.Black, modifier = Modifier.padding(top = 4.dp, bottom = 20.dp))
 
+        // Profile Picture Upload Area
         Box(
             modifier = Modifier
                 .size(100.dp)
@@ -104,11 +113,11 @@ fun RegistrationDetailsScreen(
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null
-                ) { photoPickerLauncher.launch("image/*") },
+                ) { photoPickerLauncher.launch("image/*") }, // Launch the gallery picker
             contentAlignment = Alignment.Center
         ) {
             if (selectedImageUri != null) {
-                AsyncImage(
+                AsyncImage( // Coil library used for high-performance image loading
                     model = selectedImageUri,
                     contentDescription = null,
                     modifier = Modifier.fillMaxSize().clip(CircleShape),
@@ -121,6 +130,7 @@ fun RegistrationDetailsScreen(
 
         Spacer(modifier = Modifier.height(30.dp))
 
+        // Personal Information Fields
         RegistrationInputBox("Name", firstName, { firstName = it }, "First name", logoBlue, lightBlueBg, fieldTextSize)
         Spacer(modifier = Modifier.height(12.dp))
         RegistrationInputBox("Surname", surname, { surname = it }, "Last name", logoBlue, lightBlueBg, fieldTextSize)
@@ -128,6 +138,7 @@ fun RegistrationDetailsScreen(
         RegistrationInputBox("Email", email, { email = it }, "example@email.com", logoBlue, lightBlueBg, fieldTextSize, KeyboardType.Email)
         Spacer(modifier = Modifier.height(12.dp))
 
+        // Secure Password Input with visibility toggle
         RegistrationInputBox(
             label = "Password",
             value = password,
@@ -155,6 +166,7 @@ fun RegistrationDetailsScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
+        // Subject Selection Area (Using FlowRow for automatic wrapping)
         Text(
             text = "Subjects you want to ${if(role == "Tutor") "teach" else "learn"}",
             fontWeight = FontWeight.Bold,
@@ -176,6 +188,7 @@ fun RegistrationDetailsScreen(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null
                     ) {
+                        // Toggle selection logic using immutable Set operations
                         selectedSubjects = if (isSelected) selectedSubjects - subject else selectedSubjects + subject
                     },
                     shape = RoundedCornerShape(20.dp),
@@ -195,8 +208,10 @@ fun RegistrationDetailsScreen(
 
         Spacer(modifier = Modifier.height(30.dp))
 
+        // Final Submit Button
         Button(
             onClick = {
+                // Validation before network request
                 if (email.isBlank() || password.isBlank() || firstName.isBlank()) {
                     Toast.makeText(context, "Fill in required fields", Toast.LENGTH_SHORT).show()
                     return@Button
@@ -215,10 +230,7 @@ fun RegistrationDetailsScreen(
                         hobbies = hobbiesAndInterests.split(",").map { it.trim() }.filter { it.isNotEmpty() },
                         subjects = selectedSubjects.toList()
                     )
-                    // --- FIX POINT 1: Removed onRegistrationSuccess() ---
-                    // The button no longer triggers navigation directly.
-                    // Upon success (isSuccess = true), AuthViewModel updates authState.isAuthenticated,
-                    // and MainActivity detects this change to switch screens. Safe and crash-free.
+                    // If login/reg fails, state error is shown; if success, MainActivity re-navigates.
                     if (!isSuccess) {
                         Toast.makeText(context, authState.error ?: "Registration Failed", Toast.LENGTH_SHORT).show()
                     }
@@ -230,7 +242,7 @@ fun RegistrationDetailsScreen(
                 containerColor = logoBlue,
                 contentColor = Color.White
             ),
-            enabled = !authState.isLoading
+            enabled = !authState.isLoading // Prevents double submission
         ) {
             if (authState.isLoading) {
                 CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
@@ -245,6 +257,7 @@ fun RegistrationDetailsScreen(
 
         Spacer(modifier = Modifier.height(32.dp))
 
+        // Navigate to Login Option
         Text(
             text = buildAnnotatedString {
                 withStyle(style = SpanStyle(color = Color.Black)) {
@@ -259,12 +272,14 @@ fun RegistrationDetailsScreen(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null
                 ) { onNavigateToLogin() }
-                // Padding 75.dp kept as per request
-                .padding(bottom = 75.dp)
+                .padding(bottom = 75.dp) // Requested bottom padding
         )
     }
 }
 
+/**
+ * Reusable text field component with specific styling for registration
+ */
 @Composable
 fun RegistrationInputBox(
     label: String,
@@ -291,6 +306,7 @@ fun RegistrationInputBox(
             value = value,
             onValueChange = onValueChange,
             placeholder = { Text(hint, color = Color.Gray, fontSize = fontSize) },
+            // Toggle for password dots vs plain text
             visualTransformation = if (isPassword && !passwordVisible) PasswordVisualTransformation() else VisualTransformation.None,
             keyboardOptions = KeyboardOptions(keyboardType = kType),
             trailingIcon = {

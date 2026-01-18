@@ -29,28 +29,29 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.example.studybuddies.data.model.User
 import com.example.studybuddies.viewmodel.AuthViewModel
 
 /**
- * Updated Edit Profile Screen:
- * 1. Smooth transitions and no ripple effect (Rule 2).
- * 2. All labels and texts are BLACK.
- * 3. Text field borders (Focus) in color 0xFF1A73E8.
- * FIX: Converted lists to ArrayList to match User model requirements.
+ * Screen for editing user profile information including photo, biography, and academic interests.
+ * Ensures strict color compliance (Black labels) and smooth interaction (no ripples).
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun EditProfileScreen(
-    user: User,
-    authViewModel: AuthViewModel,
-    onNavigateBack: () -> Unit
+    user: User, // The current user data passed from the navigation
+    authViewModel: AuthViewModel, // ViewModel handling the Firebase logic
+    onNavigateBack: () -> Unit // Function to close this screen
 ) {
-    val logoBlue = Color(0xFF1A73E8)
-    val lightBlueBg = Color(0xFFF0F5FF)
+    val logoBlue = Color(0xFF1A73E8) // Standard app blue
+    val lightBlueBg = Color(0xFFF0F5FF) // Accent background for avatars/chips
 
-    // Editing States - Point 7: Efficient data handling
+    // Observing the auth state to check for loading status during save operations
+    val authState by authViewModel.authState.collectAsStateWithLifecycle()
+
+    // These variables store the modified values before the user hits "Save"
     var firstName by remember { mutableStateOf(user.firstName ?: "") }
     var surname by remember { mutableStateOf(user.surname ?: "") }
     var city by remember { mutableStateOf(user.city) }
@@ -58,14 +59,14 @@ fun EditProfileScreen(
     var telephone by remember { mutableStateOf(user.telephone) }
     var bio by remember { mutableStateOf(user.bio) }
 
-    // Editable lists (Hobbies and Subjects)
+    // Dynamic lists that allow adding/removing items in real-time
     val hobbiesList = remember { user.hobbies.toMutableStateList() }
     var newHobbyTemp by remember { mutableStateOf("") }
 
     val subjectsList = remember { user.subjects.toMutableStateList() }
     var newSubjectTemp by remember { mutableStateOf("") }
 
-    // Image Selection
+    // Handles picking a photo from the device gallery
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
     val photoPickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) selectedImageUri = uri
@@ -79,7 +80,7 @@ fun EditProfileScreen(
                 navigationIcon = {
                     IconButton(
                         onClick = onNavigateBack,
-                        interactionSource = remember { MutableInteractionSource() } // No ripple (Rule 2)
+                        interactionSource = remember { MutableInteractionSource() }
                     ) {
                         Icon(Icons.Default.ArrowBack, null, tint = logoBlue)
                     }
@@ -91,6 +92,7 @@ fun EditProfileScreen(
             Surface(shadowElevation = 0.dp, color = Color.White) {
                 Button(
                     onClick = {
+                        // Creating a copy of the user object with the new data
                         val updatedUser = user.copy(
                             firstName = firstName.trim(),
                             surname = surname.trim(),
@@ -98,13 +100,12 @@ fun EditProfileScreen(
                             university = university.trim(),
                             telephone = telephone.trim(),
                             bio = bio.trim(),
-                            // FIX: Explicitly convert to ArrayList to match User model
                             hobbies = ArrayList(hobbiesList),
-                            subjects = ArrayList(subjectsList),
-                            // If a new photo was selected, use its URI, otherwise keep the old one
-                            profileImageUri = selectedImageUri?.toString() ?: user.profileImageUri
+                            subjects = ArrayList(subjectsList)
                         )
-                        authViewModel.updateUserProfile(updatedUser) {
+
+                        // Initiates the update process in the ViewModel
+                        authViewModel.updateUserProfile(updatedUser, selectedImageUri) {
                             onNavigateBack()
                         }
                     },
@@ -114,9 +115,15 @@ fun EditProfileScreen(
                         .height(56.dp),
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = logoBlue),
-                    interactionSource = remember { MutableInteractionSource() } // No ripple
+                    enabled = !authState.isLoading, // Prevents multiple taps while uploading
+                    interactionSource = remember { MutableInteractionSource() }
                 ) {
-                    Text("Save Changes", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    if (authState.isLoading) {
+                        // Shows progress while the image/data is being sent to Firebase
+                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                    } else {
+                        Text("Save Changes", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    }
                 }
             }
         }
@@ -125,13 +132,13 @@ fun EditProfileScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(rememberScrollState()) // Makes the screen scrollable if the bio is long
                 .padding(horizontal = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Photo Section - Point 6: Initials fallback
+            // The Avatar Editor
             Box(
                 modifier = Modifier
                     .size(120.dp)
@@ -140,11 +147,12 @@ fun EditProfileScreen(
                     .border(2.dp, logoBlue, CircleShape)
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
-                        indication = null
+                        indication = null // UI Rule: No ripple flash on image click
                     ) { photoPickerLauncher.launch("image/*") },
                 contentAlignment = Alignment.Center
             ) {
                 if (selectedImageUri != null) {
+                    // Show the image that was just picked from the gallery
                     AsyncImage(
                         model = selectedImageUri,
                         contentDescription = null,
@@ -152,6 +160,7 @@ fun EditProfileScreen(
                         contentScale = ContentScale.Crop
                     )
                 } else if (!user.profileImageUri.isNullOrEmpty()) {
+                    // Show the existing image already on the server
                     AsyncImage(
                         model = user.profileImageUri,
                         contentDescription = null,
@@ -159,6 +168,7 @@ fun EditProfileScreen(
                         contentScale = ContentScale.Crop
                     )
                 } else {
+                    // Default to name initials if no image is present
                     Text(
                         text = user.initials,
                         color = logoBlue,
@@ -176,7 +186,7 @@ fun EditProfileScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Text Fields - Point 1: Black text
+            // Standard Information Inputs
             ProfileTextField("First Name", firstName) { firstName = it }
             Spacer(Modifier.height(16.dp))
             ProfileTextField("Surname", surname) { surname = it }
@@ -188,7 +198,7 @@ fun EditProfileScreen(
             ProfileTextField("Phone", telephone, KeyboardType.Phone) { telephone = it }
             Spacer(Modifier.height(16.dp))
 
-            // Subjects Section - Point 7: Dynamic adding
+            // Academic Interests Management
             ChipInputSection(
                 title = "Subjects",
                 tempValue = newSubjectTemp,
@@ -202,11 +212,12 @@ fun EditProfileScreen(
 
             Spacer(Modifier.height(24.dp))
 
+            // Biography Input
             ProfileTextField("Bio", bio, singleLine = false) { bio = it }
 
             Spacer(Modifier.height(24.dp))
 
-            // Hobbies Section
+            // Personal Interests Management
             ChipInputSection(
                 title = "Hobbies & Interests",
                 tempValue = newHobbyTemp,
@@ -223,6 +234,9 @@ fun EditProfileScreen(
     }
 }
 
+/**
+ * Reusable text field styled specifically for the profile editing screen.
+ */
 @Composable
 fun ProfileTextField(
     label: String,
@@ -236,7 +250,7 @@ fun ProfileTextField(
             text = label,
             fontSize = 14.sp,
             fontWeight = FontWeight.Bold,
-            color = Color.Black, // Black label (Rule 1)
+            color = Color.Black, // Ensures all labels remain Black
             modifier = Modifier.padding(bottom = 8.dp)
         )
         OutlinedTextField(
@@ -245,7 +259,7 @@ fun ProfileTextField(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Color(0xFF1A73E8), // Blue border (Rule 6)
+                focusedBorderColor = Color(0xFF1A73E8), // Focus turns brand blue
                 unfocusedBorderColor = Color(0xFFE0E0E0),
                 focusedContainerColor = Color.White,
                 unfocusedContainerColor = Color.White,
@@ -258,6 +272,9 @@ fun ProfileTextField(
     }
 }
 
+/**
+ * Section for adding and displaying interactive tags (Chips) for subjects or hobbies.
+ */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ChipInputSection(
@@ -275,7 +292,7 @@ fun ChipInputSection(
             text = title,
             fontSize = 14.sp,
             fontWeight = FontWeight.Bold,
-            color = Color.Black // Black header (Rule 1)
+            color = Color.Black
         )
 
         Row(
@@ -305,6 +322,7 @@ fun ChipInputSection(
             }
         }
 
+        // Only render the FlowRow if there are actual items to show
         if (items.isNotEmpty()) {
             FlowRow(
                 modifier = Modifier.padding(top = 12.dp).fillMaxWidth(),
@@ -314,7 +332,7 @@ fun ChipInputSection(
                 items.forEach { item ->
                     InputChip(
                         selected = true,
-                        onClick = { onRemoveItem(item) },
+                        onClick = { onRemoveItem(item) }, // Tapping a chip removes it
                         label = { Text(item, color = logoBlue, fontWeight = FontWeight.Bold) },
                         trailingIcon = { Icon(Icons.Default.Close, null, tint = logoBlue, modifier = Modifier.size(16.dp)) },
                         colors = InputChipDefaults.inputChipColors(
@@ -323,7 +341,7 @@ fun ChipInputSection(
                         ),
                         border = BorderStroke(1.dp, logoBlue.copy(alpha = 0.5f)),
                         shape = RoundedCornerShape(16.dp),
-                        interactionSource = remember { MutableInteractionSource() } // No ripple
+                        interactionSource = remember { MutableInteractionSource() }
                     )
                 }
             }

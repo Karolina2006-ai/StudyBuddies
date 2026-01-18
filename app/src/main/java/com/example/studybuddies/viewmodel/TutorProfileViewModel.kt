@@ -9,7 +9,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-// View States (Loading, Success, Error)
+/**
+ * Represents the various states of the Tutor Profile screen.
+ * Using a sealed class ensures the UI handles all scenarios (Loading, Success, Error)
+ * and prevents invalid states.
+ */
 sealed class ProfileUiState {
     object Loading : ProfileUiState()
     data class Success(val tutor: User) : ProfileUiState()
@@ -20,24 +24,32 @@ class TutorProfileViewModel(
     private val userRepository: UserRepository
 ) : ViewModel() {
 
+    // Internal mutable state flow to track the profile state
     private val _uiState = MutableStateFlow<ProfileUiState>(ProfileUiState.Loading)
+
+    // External read-only state flow exposed to the UI (Compose/Fragments)
     val uiState: StateFlow<ProfileUiState> = _uiState.asStateFlow()
 
+    /**
+     * Fetches a tutor's profile details from the repository based on their unique ID.
+     */
     fun loadTutor(tutorId: String) {
         viewModelScope.launch {
+            // Set state to Loading whenever a new request starts
             _uiState.value = ProfileUiState.Loading
             try {
-                // Fetch tutor data from the repository
+                // Perform the network/database fetch
                 val tutor = userRepository.getUserProfile(tutorId)
 
                 if (tutor != null) {
-                    // Data found -> Show profile
+                    // Successfully retrieved data -> transition to Success state
                     _uiState.value = ProfileUiState.Success(tutor)
                 } else {
-                    // Not found in database -> Show error instead of loading infinitely
+                    // Result was null -> show a specific "Not Found" error
                     _uiState.value = ProfileUiState.Error("Tutor profile not found.")
                 }
             } catch (e: Exception) {
+                // Catch network issues or parsing errors and show the error state
                 _uiState.value = ProfileUiState.Error(e.message ?: "Unknown error occurred")
             }
         }

@@ -15,7 +15,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 
 /**
  * Navigation tabs for the bottom bar.
- * Tab definition. The logic for removing the ripple effect is handled in MainLayoutScreen.
+ * Using an enum is a clean way to avoid typos that happen with 'String' routes.
  */
 enum class HomeTab {
     CHAT,
@@ -27,16 +27,18 @@ enum class HomeTab {
 
 /**
  * Data class representing a single item in the bottom navigation bar.
+ * This makes the code modular: if we want to add a tab, we just add it to the list.
  */
 data class BottomNavItem(
-    val title: String,
-    val route: HomeTab,
-    val icon: ImageVector,
-    val selectedIcon: ImageVector
+    val title: String,         // Text shown under the icon
+    val route: HomeTab,        // The enum value used for navigation logic
+    val icon: ImageVector,     // The "empty" outline icon (not selected)
+    val selectedIcon: ImageVector // The "filled" icon (when active)
 )
 
 /**
  * Configuration for the bottom navigation bar.
+ * This list is looped through in the MainLayoutScreen to draw the UI.
  */
 val BottomNavItems = listOf(
     BottomNavItem(

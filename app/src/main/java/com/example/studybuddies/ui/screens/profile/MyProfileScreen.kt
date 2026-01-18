@@ -24,25 +24,30 @@ import com.example.studybuddies.data.model.User
 import com.example.studybuddies.viewmodel.LessonsViewModel
 import com.example.studybuddies.viewmodel.AuthViewModel
 
+/**
+ * Main Profile Screen: Displays user info, tutor dashboard, and availability.
+ * Student perspective: I can see my details and navigate to edit them.
+ */
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun MyProfileScreen(
-    user: User,
-    onEditClick: () -> Unit,
-    onLogout: () -> Unit,
-    lessonsViewModel: LessonsViewModel,
-    authViewModel: AuthViewModel? = null
+    user: User, // The current user object containing all profile data
+    onEditClick: () -> Unit, // Callback to navigate to the Edit Screen
+    onLogout: () -> Unit, // Callback to sign out
+    lessonsViewModel: LessonsViewModel, // Handles hourly rate and availability updates
+    authViewModel: AuthViewModel? = null // Optional VM to trigger data refreshes
 ) {
-    val logoBlue = Color(0xFF1A73E8)
-    val lightBlueBg = Color(0xFFF0F5FF)
-    val dividerColor = Color(0xFFF7F7F7)
+    val logoBlue = Color(0xFF1A73E8) // Our signature blue color
+    val lightBlueBg = Color(0xFFF0F5FF) // Used for chips and avatar backgrounds
+    val dividerColor = Color(0xFFF7F7F7) // Light gray for visual sectioning
 
+    // State for the popup that changes the tutor's price
     var showRateDialog by remember { mutableStateOf(false) }
 
-    // FIX 1: Using remember with user.hourlyRate key.
+    // Ensures the local price state updates if the user object changes from the backend
     var currentRate by remember(user.hourlyRate) { mutableStateOf(user.hourlyRate.toString()) }
 
-    // Logic availability
+    // Hardcoded lists for the calendar-style availability view
     val weekDays = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
     val fullDaysMap = mapOf(
         "Mon" to "Monday", "Tue" to "Tuesday", "Wed" to "Wednesday",
@@ -56,16 +61,16 @@ fun MyProfileScreen(
 
     var selectedDayShort by remember { mutableStateOf("Mon") }
 
-    // FIX 2: Guarantees that the availability view is always in sync with user data.
+    // This local state tracks the user's availability schedule before saving
     var availabilityState by remember(user.availability) { mutableStateOf(user.availability) }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.White)
-            .verticalScroll(rememberScrollState())
+            .verticalScroll(rememberScrollState()) // Allows scrolling through the full profile
     ) {
-        // --- HEADER ---
+        // --- HEADER SECTION ---
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -76,7 +81,7 @@ fun MyProfileScreen(
         ) {
             Text("Profile", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.Black)
 
-            // Logout Icon (No Ripple)
+            // Logout Button: Triggers the sign-out logic
             Icon(
                 imageVector = Icons.Default.ExitToApp,
                 contentDescription = "Logout",
@@ -85,12 +90,12 @@ fun MyProfileScreen(
                     .size(28.dp)
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
-                        indication = null
+                        indication = null // Clean design, no ripple
                     ) { onLogout() }
             )
         }
 
-        // --- AVATAR & DATA ---
+        // --- AVATAR & BASIC DATA ---
         Column(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
@@ -102,6 +107,7 @@ fun MyProfileScreen(
                     .background(lightBlueBg),
                 contentAlignment = Alignment.Center
             ) {
+                // Shows the profile pic if it exists, otherwise defaults to initials
                 if (!user.profileImageUri.isNullOrEmpty()) {
                     AsyncImage(
                         model = user.profileImageUri,
@@ -122,6 +128,7 @@ fun MyProfileScreen(
                 color = Color.Black
             )
 
+            // University and City sub-labels
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
                 Icon(Icons.Default.School, null, modifier = Modifier.size(16.dp), tint = logoBlue)
                 Text(user.university, color = Color.Gray, modifier = Modifier.padding(start = 8.dp), fontSize = 14.sp)
@@ -131,7 +138,7 @@ fun MyProfileScreen(
                 Text(user.city, color = Color.Gray, modifier = Modifier.padding(start = 8.dp), fontSize = 14.sp)
             }
 
-            // Hourly Rate (Tutor Only) with Edit
+            // Price Section: Only tutors see this
             if (user.isTutor) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -144,6 +151,7 @@ fun MyProfileScreen(
                         fontSize = 18.sp
                     )
                     Spacer(modifier = Modifier.width(8.dp))
+                    // Opens the "Update Rate" dialog
                     Icon(
                         imageVector = Icons.Default.Edit,
                         contentDescription = "Edit Rate",
@@ -158,9 +166,9 @@ fun MyProfileScreen(
                 }
             }
 
-            // --- FIXED BUTTON ---
+            // Main navigation button to the Edit screen
             Button(
-                onClick = { onEditClick() }, // Triggers navigation action
+                onClick = { onEditClick() },
                 modifier = Modifier
                     .padding(top = 24.dp)
                     .fillMaxWidth()
@@ -174,16 +182,18 @@ fun MyProfileScreen(
             }
         }
 
+        // Section separator
         HorizontalDivider(thickness = 8.dp, color = dividerColor, modifier = Modifier.padding(vertical = 24.dp))
 
-        // --- SUBJECTS (Everyone) ---
+        // --- SUBJECTS SECTION ---
         Column(modifier = Modifier.padding(horizontal = 24.dp)) {
             Text(
-                text = user.roleSectionTitle,
+                text = user.roleSectionTitle, // Usually "Subjects I Teach" or "Subjects I Study"
                 fontWeight = FontWeight.Bold,
                 fontSize = 18.sp,
                 color = Color.Black
             )
+            // Displays tags that wrap to the next line automatically
             FlowRow(
                 modifier = Modifier.padding(top = 12.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -206,7 +216,7 @@ fun MyProfileScreen(
             }
         }
 
-        // --- BIO ---
+        // --- BIO SECTION ---
         Column(modifier = Modifier.padding(24.dp)) {
             Text("Bio", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color.Black)
             Text(
@@ -217,7 +227,7 @@ fun MyProfileScreen(
             )
         }
 
-        // --- HOBBIES (Everyone) ---
+        // --- HOBBIES SECTION ---
         if (user.hobbies.isNotEmpty()) {
             Column(modifier = Modifier.padding(horizontal = 24.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -244,11 +254,12 @@ fun MyProfileScreen(
             HorizontalDivider(thickness = 8.dp, color = dividerColor, modifier = Modifier.padding(vertical = 24.dp))
         }
 
-        // --- AVAILABILITY (Tutor Only) ---
+        // --- TUTOR AVAILABILITY MANAGEMENT ---
         if (user.isTutor) {
             Column(modifier = Modifier.padding(horizontal = 24.dp)) {
                 Text("My Availability", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = logoBlue)
 
+                // Day selector row
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
                     horizontalArrangement = Arrangement.SpaceBetween
@@ -275,6 +286,7 @@ fun MyProfileScreen(
                     }
                 }
 
+                // Grid of time slots for the selected day
                 val fullDayName = fullDaysMap[selectedDayShort] ?: "Monday"
                 FlowRow(
                     modifier = Modifier.padding(top = 8.dp),
@@ -288,7 +300,7 @@ fun MyProfileScreen(
                             onClick = {
                                 val currentList = availabilityState[fullDayName]?.toMutableList() ?: mutableListOf()
                                 if (isSelected) currentList.remove(time) else currentList.add(time)
-                                // FIX: Wrap in HashMap to match strict type requirement of User model
+                                // Update local availability state before saving to DB
                                 availabilityState = HashMap(availabilityState + (fullDayName to currentList))
                             },
                             label = { Text(time) },
@@ -299,6 +311,7 @@ fun MyProfileScreen(
                     }
                 }
 
+                // Save button to persist availability changes to Firestore
                 Button(
                     onClick = {
                         lessonsViewModel.saveAvailability(availabilityState)
@@ -314,16 +327,17 @@ fun MyProfileScreen(
             HorizontalDivider(thickness = 8.dp, color = dividerColor, modifier = Modifier.padding(vertical = 24.dp))
         }
 
-        // --- DASHBOARD (Tutor Only) ---
+        // --- TUTOR DASHBOARD (STATS & REVIEWS) ---
         if (user.isTutor) {
             Column(modifier = Modifier.padding(horizontal = 24.dp)) {
                 Text("Tutor Dashboard", color = logoBlue, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp)
                 Spacer(Modifier.height(24.dp))
                 Text("My Rating", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color.Black)
 
+                // Summary Score Card
                 Surface(
                     modifier = Modifier.padding(top = 12.dp).fillMaxWidth(),
-                    color = Color(0xFFFFF9E6),
+                    color = Color(0xFFFFF9E6), // Light gold background
                     shape = RoundedCornerShape(16.dp)
                 ) {
                     Row(
@@ -348,6 +362,7 @@ fun MyProfileScreen(
                 }
 
                 Spacer(Modifier.height(24.dp))
+                // Visual breakdown of star ratings (5 down to 1)
                 listOf("5", "4", "3", "2", "1").forEach { star ->
                     val count = user.ratingStats[star]?.toInt() ?: 0
                     val total = user.totalReviews.takeIf { it > 0 } ?: 1
@@ -357,6 +372,7 @@ fun MyProfileScreen(
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 24.dp))
                 Text("Received Reviews", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color.Black)
+                // List of textual feedback from students
                 if (user.reviews.isEmpty()) {
                     Text("No reviews yet.", color = Color.Gray, modifier = Modifier.padding(top = 8.dp))
                 } else {
@@ -373,6 +389,7 @@ fun MyProfileScreen(
         Spacer(modifier = Modifier.height(20.dp))
     }
 
+    // --- DIALOG FOR UPDATING TUTOR HOURLY RATE ---
     if (showRateDialog) {
         AlertDialog(
             onDismissRequest = { showRateDialog = false },
@@ -400,7 +417,6 @@ fun MyProfileScreen(
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = logoBlue)
                 ) {
-                    // FORCED WHITE COLOR
                     Text("Save", color = Color.White)
                 }
             },
@@ -410,11 +426,15 @@ fun MyProfileScreen(
     }
 }
 
+/**
+ * Custom progress bar for the rating breakdown section.
+ */
 @Composable
 fun RatingProgressBar(stars: Int, percentage: Int) {
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 4.dp)) {
         Text("$stars", fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(16.dp), color = Color.Black)
         Icon(Icons.Default.Star, null, Modifier.size(14.dp), Color(0xFFFFC107))
+        // Shows the relative percentage of reviews with this star count
         LinearProgressIndicator(
             progress = { percentage / 100f },
             modifier = Modifier.weight(1f).padding(horizontal = 12.dp).height(8.dp).clip(CircleShape),

@@ -7,45 +7,44 @@ import com.google.firebase.firestore.DocumentId
  */
 data class Tutor(
     @DocumentId
-    var uid: String = "",
+    var uid: String = "", // Unique ID from Firebase Auth. Maps to the document name in Firestore.
 
-    // FIX: Changed to clean names, consistent with User.kt (without @PropertyName)
+    // Basic identity info. Keeping it consistent with the general 'User' model is smart for syncing.
     var firstName: String = "",
     var surname: String = "",
 
     var city: String = "",
     var university: String = "",
-    var bio: String = "",
+    var bio: String = "", // A short description where the tutor can "sell" their services.
     var telephone: String = "",
 
+    // Using Lists for these makes it easy to add/remove tags in the UI.
     var hobbies: List<String> = emptyList(),
     var interests: List<String> = emptyList(),
-    var subjects: List<String> = emptyList(),
+    var subjects: List<String> = emptyList(), // Crucial for the search filter.
 
-    // This must match the field in User.kt (averageRating)
+    // Statistics used to show "Social Proof" (stars and number of reviews).
     var averageRating: Double = 0.0,
-
-    // This must match the field in User.kt (totalReviews)
     var totalReviews: Int = 0,
 
-    // This must match the field in User.kt (hourlyRate)
+    // Pricing info. Using Double allows for cents (e.g., 25.50), though usually it's whole numbers.
     var hourlyRate: Double = 0.0,
 
-    // This must match the field in User.kt (profileImageUri)
+    // Nullable String because a tutor might not have uploaded a photo yet.
     var profileImageUri: String? = null,
 
-    // List of reviews
+    // A nested list of ReviewData objects.
     var reviews: List<ReviewData> = emptyList()
 ) {
-    // Full name helper property
+    // Helper property to get the full name without writing "$firstName $surname" everywhere.
     val fullName: String get() = "$firstName $surname".trim()
 
-    // Initials helper property
+    // Used for the circular avatar placeholder if the profile image is missing.
     val initials: String get() {
         return if (firstName.isNotEmpty()) {
             firstName.take(1).uppercase()
         } else {
-            "?"
+            "?" // Fallback if the name isn't set yet.
         }
     }
 }

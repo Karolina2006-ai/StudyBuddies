@@ -31,29 +31,35 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun LoginScreen(
-    authViewModel: AuthViewModel,
-    onNavigateToRegister: () -> Unit,
-    onLoginSuccess: () -> Unit
+    authViewModel: AuthViewModel, // Accessing auth logic (login, reset, state)
+    onNavigateToRegister: () -> Unit, // Callback to switch to the registration screen
+    onLoginSuccess: () -> Unit // Callback to move into the main app after successful login
 ) {
+    // Collect the UI state (loading, error, auth status) from the ViewModel
     val authState by authViewModel.authState.collectAsStateWithLifecycle()
+
+    // UI Theme Colors
     val logoBlue = Color(0xFF1A73E8)
     val bgInput = Color(0xFFF3F6FC)
+
+    // Utilities for context, coroutines, and snackbars
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
+    // local UI state for inputs (not saved in ViewModel yet)
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
 
-    // Automatic login handling
+    // Automatic transition: if auth state changes to true, trigger success callback
     LaunchedEffect(authState.isAuthenticated) {
         if (authState.isAuthenticated) {
             onLoginSuccess()
         }
     }
 
-    // PROFESSIONAL PASSWORD RESET HANDLING
+    // Listens for the password reset flag to show a feedback message
     LaunchedEffect(authState.isPasswordResetSent) {
         if (authState.isPasswordResetSent) {
             scope.launch {
@@ -61,31 +67,31 @@ fun LoginScreen(
                     message = "A password reset link has been sent to your email address.",
                     duration = SnackbarDuration.Short
                 )
-                authViewModel.clearResetState()
+                authViewModel.clearResetState() // Resets the flag so the message doesn't repeat
             }
         }
     }
 
     Scaffold(
-        containerColor = Color.White
+        containerColor = Color.White // Set background to clean white
     ) { paddingValues ->
-        // Use Box to position overlay elements
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // CONTENT LAYER (Form)
+            // Main Content Layer
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(Color.White)
-                    .verticalScroll(rememberScrollState())
+                    .verticalScroll(rememberScrollState()) // Ensures small screens can see the whole form
                     .padding(horizontal = 24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Spacer(modifier = Modifier.height(60.dp))
 
+                // App Branding: Logo and Text
                 Image(
                     painter = painterResource(id = R.drawable.ic_logo),
                     contentDescription = null,
@@ -107,6 +113,7 @@ fun LoginScreen(
                     modifier = Modifier.padding(top = 8.dp, bottom = 48.dp)
                 )
 
+                // Reusable input fields for credentials
                 LoginField("Email", email, { email = it }, "Enter your email", logoBlue, bgInput)
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -123,6 +130,7 @@ fun LoginScreen(
                     onToggleVisibility = { passwordVisible = !passwordVisible }
                 )
 
+                // Forgot Password link: triggers reset email if email field isn't empty
                 Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
                     Text(
                         text = "Forgot Password?",
@@ -133,7 +141,7 @@ fun LoginScreen(
                             .padding(top = 12.dp)
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
-                                indication = null
+                                indication = null // Removes the gray box effect on click
                             ) {
                                 if (email.isNotBlank()) {
                                     authViewModel.resetPassword(email.trim())
@@ -146,6 +154,7 @@ fun LoginScreen(
 
                 Spacer(modifier = Modifier.height(32.dp))
 
+                // Main Action Button: Logic changes based on loading state
                 Button(
                     onClick = { authViewModel.loginUser(email.trim(), password.trim()) },
                     modifier = Modifier.fillMaxWidth().height(56.dp),
@@ -154,10 +163,10 @@ fun LoginScreen(
                         containerColor = logoBlue,
                         disabledContainerColor = logoBlue.copy(alpha = 0.6f)
                     ),
-                    enabled = !authState.isLoading
+                    enabled = !authState.isLoading // Prevent multiple clicks while logging in
                 ) {
                     if (authState.isLoading) {
-                        CircularProgressIndicator(
+                        CircularProgressIndicator( // Show spinner during network request
                             color = Color.White,
                             modifier = Modifier.size(24.dp),
                             strokeWidth = 3.dp
@@ -172,6 +181,7 @@ fun LoginScreen(
                     }
                 }
 
+                // Error reporting for invalid credentials or connection issues
                 if (authState.error != null) {
                     Text(
                         text = authState.error ?: "Login failed. Check your data.",
@@ -184,6 +194,7 @@ fun LoginScreen(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
+                // Footer: Navigate to Register screen using an AnnotatedString for mixed styling
                 Text(
                     text = buildAnnotatedString {
                         withStyle(style = SpanStyle(color = Color.Black)) {
@@ -201,12 +212,11 @@ fun LoginScreen(
                 Spacer(modifier = Modifier.height(40.dp))
             }
 
-            // NOTIFICATION LAYER (SNACKBAR)
-            // Using BiasAlignment(0f, -0.2f) to position it "slightly above" the center
+            // Snackbar Layer: Custom notification for password reset success
             SnackbarHost(
                 hostState = snackbarHostState,
                 modifier = Modifier
-                    .align(BiasAlignment(0f, -0.2f))
+                    .align(BiasAlignment(0f, -0.2f)) // Positioned slightly above the middle
                     .padding(horizontal = 24.dp)
             ) { data ->
                 Surface(
@@ -255,8 +265,10 @@ fun LoginField(
             placeholder = { Text(hint, color = Color.Gray) },
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
+            // Toggles between dots and visible text for passwords
             visualTransformation = if (isPassword && !passwordVisible) PasswordVisualTransformation() else VisualTransformation.None,
             trailingIcon = {
+                // Eye icon to show/hide password
                 if (isPassword && onToggleVisibility != null) {
                     IconButton(
                         onClick = onToggleVisibility,

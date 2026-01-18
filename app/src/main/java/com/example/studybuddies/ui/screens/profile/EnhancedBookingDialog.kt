@@ -28,23 +28,24 @@ import com.example.studybuddies.viewmodel.LessonsViewModel
  */
 @Composable
 fun EnhancedBookingDialog(
-    tutorId: String,
-    viewModel: LessonsViewModel,
-    onDismiss: () -> Unit,
-    onConfirm: (String, String) -> Unit
+    tutorId: String, // The ID of the tutor we are trying to book
+    viewModel: LessonsViewModel, // The shared VM that holds the global booking state
+    onDismiss: () -> Unit, // Closes the dialog
+    onConfirm: (String, String) -> Unit // Triggers the booking logic and notification scheduling
 ) {
-    val logoBlue = Color(0xFF1A73E8)
-    val lightBlue = Color(0xFFF0F5FF)
+    val logoBlue = Color(0xFF1A73E8) // Our primary brand blue
+    val lightBlue = Color(0xFFF0F5FF) // Used for available but unselected slots
 
-    // REACTIVE BINDING: This is the critical part.
-    // We observe the flow that is updated by the SnapshotListener in LessonsViewModel.
+    // REACTIVE BINDING: We watch the global lesson list.
+    // If someone else books a slot while this dialog is open, the UI will update instantly.
     val globalLessons by viewModel.globalAllLessons.collectAsStateWithLifecycle()
 
+    // Mock data for the demonstration (would normally come from a calendar helper)
     val days = listOf("Mon, Dec 27", "Tue, Dec 28", "Wed, Dec 29", "Thu, Dec 30")
     val timeSlots = listOf("09:00 AM", "10:00 AM", "11:00 AM", "02:00 PM", "03:00 PM", "04:00 PM")
 
-    var selectedDay by remember { mutableStateOf(days[0]) }
-    var selectedTime by remember { mutableStateOf("") }
+    var selectedDay by remember { mutableStateOf(days[0]) } // Defaults to the first available day
+    var selectedTime by remember { mutableStateOf("") } // Starts empty so the user is forced to pick
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
@@ -56,17 +57,16 @@ fun EnhancedBookingDialog(
             elevation = CardDefaults.cardElevation(0.dp)
         ) {
             Column(modifier = Modifier.padding(24.dp)) {
-                // Title - Always Black per rules
                 Text(
                     text = "Select Date & Time",
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color.Black
+                    color = Color.Black // Consistent black labeling
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Day Selection
+                // --- DAY SELECTION ROW ---
                 Row(
                     modifier = Modifier.horizontalScroll(rememberScrollState())
                 ) {
@@ -77,10 +77,10 @@ fun EnhancedBookingDialog(
                                 .padding(end = 8.dp)
                                 .clickable(
                                     interactionSource = remember { MutableInteractionSource() },
-                                    indication = null
+                                    indication = null // UI requirement: No gray ripple effect
                                 ) {
                                     selectedDay = day
-                                    selectedTime = ""
+                                    selectedTime = "" // Reset time when the day changes to avoid invalid bookings
                                 },
                             shape = RoundedCornerShape(12.dp),
                             color = if (isSelected) logoBlue else lightBlue
@@ -97,16 +97,15 @@ fun EnhancedBookingDialog(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Time Grid - Reactive Slot Blocking
+                // --- TIME GRID SELECTION ---
                 LazyVerticalGrid(
-                    columns = GridCells.Fixed(3),
+                    columns = GridCells.Fixed(3), // 3 columns looks best on most phone widths
                     modifier = Modifier.height(180.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(timeSlots) { time ->
-                        // The 'globalLessons' comes directly from the SnapshotListener.
-                        // If anyone in the world books this slot, it will turn gray instantly.
+                        // LOGIC: Check if this specific tutor is already busy at this specific time/day
                         val isOccupied = globalLessons.any {
                             it.tutorId == tutorId && it.date == selectedDay && it.time == time && it.status != "Cancelled"
                         }
@@ -114,15 +113,15 @@ fun EnhancedBookingDialog(
 
                         Surface(
                             modifier = Modifier.clickable(
-                                enabled = !isOccupied,
+                                enabled = !isOccupied, // Disable clicking if the slot is taken
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null
                             ) { selectedTime = time },
                             shape = RoundedCornerShape(12.dp),
                             color = when {
-                                isOccupied -> Color(0xFFF1F3F4)
-                                isSelected -> logoBlue
-                                else -> lightBlue
+                                isOccupied -> Color(0xFFF1F3F4) // Light gray for blocked slots
+                                isSelected -> logoBlue // Solid blue for the user's choice
+                                else -> lightBlue // Light blue for available slots
                             }
                         ) {
                             Box(modifier = Modifier.padding(vertical = 12.dp), contentAlignment = Alignment.Center) {
@@ -143,17 +142,14 @@ fun EnhancedBookingDialog(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Confirm Button
+                // --- CONFIRMATION BUTTON ---
                 Button(
                     onClick = {
                         if (selectedTime.isNotEmpty()) {
-                            // 1. Process the booking
+                            // Triggers the creation of the lesson document and the 3 notification alarms
                             onConfirm(selectedDay, selectedTime)
-
-                            // 2. Immediate local update trigger
+                            // Re-sync the local database to show the new card immediately
                             viewModel.loadLessons()
-
-                            // 3. Close the dialog
                             onDismiss()
                         }
                     },
@@ -161,7 +157,7 @@ fun EnhancedBookingDialog(
                         .fillMaxWidth()
                         .height(54.dp),
                     shape = RoundedCornerShape(12.dp),
-                    enabled = selectedTime.isNotEmpty(),
+                    enabled = selectedTime.isNotEmpty(), // Button stays gray until a time is picked
                     colors = ButtonDefaults.buttonColors(
                         containerColor = logoBlue,
                         disabledContainerColor = Color.LightGray

@@ -19,28 +19,29 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.studybuddies.viewmodel.ChatViewModel
 
-
 /**
  * MessagesScreen - Displays a list of active conversations.
- * Updated: Navigation by ID and Name, consistent with ChatData model.
+ * Handles the high-level list state and search/empty results.
  */
 @Composable
 fun MessagesScreen(
     viewModel: ChatViewModel,
-    // FIX: Changed to (String, String) to match NavHost requirements
+    // Callback passes both ID (for Firebase) and Name (for the Detail Header)
     onChatClick: (String, String) -> Unit
 ) {
     val logoBlue = Color(0xFF1A73E8)
     val lightBlueBg = Color(0xFFF0F5FF)
+
+    // Observes the chats flow from the ViewModel as state
     val chatList by viewModel.chats.collectAsStateWithLifecycle()
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.White)
-            .statusBarsPadding()
+            .statusBarsPadding() // Ensures content is below the system clock/icons
     ) {
-        // Screen Title (Rule 6)
+        // Main Screen Title
         Text(
             text = "Messages",
             fontSize = 28.sp,
@@ -49,31 +50,32 @@ fun MessagesScreen(
             modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)
         )
 
+        // Show a prompt if there are no messages; otherwise, show the list
         if (chatList.isEmpty()) {
             EmptyMessagesPlaceholder()
         } else {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(bottom = 80.dp)
+                contentPadding = PaddingValues(bottom = 80.dp) // Space for bottom navigation
             ) {
-                // Header item inside the list
+                // Persistent header inside the scrollable area
                 item {
                     Text(
                         text = "Recent Conversations",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color.Black, // BLACK HEADER (Rule 1)
+                        color = Color.Black,
                         modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
                     )
                 }
 
+                // Generates items dynamically from the chat list
                 items(chatList) { chat ->
                     MessageItem(
                         chat = chat,
                         logoBlue = logoBlue,
                         lightBlueBg = lightBlueBg,
                         onClick = {
-                            // FIX: Passing ID (for database) and Name (for header)
                             onChatClick(chat.id, chat.name)
                         }
                     )
@@ -83,6 +85,9 @@ fun MessagesScreen(
     }
 }
 
+/**
+ * Individual chat row component.
+ */
 @Composable
 fun MessageItem(
     chat: ChatData,
@@ -95,12 +100,12 @@ fun MessageItem(
             .fillMaxWidth()
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
-                indication = null // REMOVING GRAY RIPPLE (Rule 2)
+                indication = null // Removes the default gray background flash when clicked
             ) { onClick() }
             .padding(horizontal = 24.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Avatar with initials
+        // Profile Avatar section
         Box(modifier = Modifier.size(60.dp)) {
             Box(
                 modifier = Modifier
@@ -109,7 +114,7 @@ fun MessageItem(
                     .background(lightBlueBg),
                 contentAlignment = Alignment.Center
             ) {
-                // Initials Logic (e.g. "John Doe" -> "JD")
+                // Extracts the first letter of first and last name (e.g., "John Doe" -> "JD")
                 val initials = if (chat.name.isNotBlank()) {
                     chat.name.trim().split(" ")
                         .mapNotNull { it.firstOrNull()?.toString() }
@@ -121,7 +126,7 @@ fun MessageItem(
                 Text(initials, color = logoBlue, fontWeight = FontWeight.Bold, fontSize = 20.sp)
             }
 
-            // Green Online Status Indicator (Rule 7)
+            // Green "Online" status badge positioned at the bottom-right of the avatar
             Box(
                 modifier = Modifier
                     .size(14.dp)
@@ -139,6 +144,7 @@ fun MessageItem(
             }
         }
 
+        // Text content section (Name, Message Preview, and Time)
         Column(
             modifier = Modifier
                 .padding(start = 16.dp)
@@ -150,14 +156,14 @@ fun MessageItem(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = chat.name, // Full Name (Rule 6)
+                    text = chat.name,
                     fontWeight = FontWeight.Bold,
                     fontSize = 17.sp,
                     color = Color.Black
                 )
                 Text(
                     text = chat.time,
-                    color = Color.Black, // BLACK DATE (Rule 1)
+                    color = Color.Black,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium
                 )
@@ -168,13 +174,14 @@ fun MessageItem(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = chat.message,
+                    // If unread messages exist, the preview turns black (instead of gray)
                     color = if (chat.unread > 0) Color.Black else Color.Gray,
                     fontSize = 14.sp,
                     maxLines = 1,
                     modifier = Modifier.weight(1f)
                 )
 
-                // Blue unread message counter
+                // Blue notification badge for unread message counts
                 if (chat.unread > 0) {
                     Surface(
                         color = logoBlue,
@@ -191,6 +198,9 @@ fun MessageItem(
     }
 }
 
+/**
+ * Centered state for empty lists.
+ */
 @Composable
 fun EmptyMessagesPlaceholder() {
     Column(

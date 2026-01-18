@@ -25,8 +25,8 @@ import com.example.studybuddies.viewmodel.*
  */
 @Composable
 fun StudyBuddiesNavHost(
-    navController: NavHostController,
-    authViewModel: AuthViewModel,
+    navController: NavHostController, // Standard controller to switch between screens
+    authViewModel: AuthViewModel,     // ViewModels are passed as parameters to share state
     homeViewModel: HomeViewModel,
     searchViewModel: SearchViewModel,
     lessonsViewModel: LessonsViewModel,
@@ -34,16 +34,17 @@ fun StudyBuddiesNavHost(
     tutorProfileViewModel: TutorProfileViewModel,
     onLogout: () -> Unit
 ) {
+    // NavHost connects the navController to a navigation graph
     NavHost(
         navController = navController,
-        startDestination = "home"
+        startDestination = "home" // Defines the first screen the user sees
     ) {
         // --- HOME SCREEN ---
         composable("home") {
-            // TU BYŁ BŁĄD. Teraz przekazujemy lessonsViewModel!
+            // Passing the shared lessonsViewModel ensures home screen lists stay updated
             HomeScreen(
                 homeViewModel = homeViewModel,
-                lessonsViewModel = lessonsViewModel, // <--- TO JEST KLUCZOWE!
+                lessonsViewModel = lessonsViewModel,
                 onTutorClick = { tutorId ->
                     navController.navigate("tutor_profile/$tutorId")
                 }
@@ -62,7 +63,7 @@ fun StudyBuddiesNavHost(
 
         // --- LESSONS SCREEN ---
         composable("lessons") {
-            // This screen now reacts instantly to any changes in lessonsViewModel
+            // Reacts instantly to changes in lessons (like a new booking or cancellation)
             LessonsScreen(viewModel = lessonsViewModel)
         }
 
@@ -71,6 +72,7 @@ fun StudyBuddiesNavHost(
             ChatScreen(
                 viewModel = chatViewModel,
                 onChatClick = { chatId, chatName ->
+                    // Navigate to conversation using unique ID and name as arguments
                     navController.navigate("chat_detail/$chatId/$chatName")
                 }
             )
@@ -78,6 +80,7 @@ fun StudyBuddiesNavHost(
 
         // --- MY PROFILE ---
         composable("profile") {
+            // collectAsStateWithLifecycle is used for lifecycle-aware state observation
             val authState by authViewModel.authState.collectAsStateWithLifecycle()
             val currentUser = authState.currentUser
 
@@ -88,7 +91,7 @@ fun StudyBuddiesNavHost(
                         navController.navigate("edit_profile")
                     },
                     onLogout = onLogout,
-                    lessonsViewModel = lessonsViewModel, // Sharing the same instance
+                    lessonsViewModel = lessonsViewModel,
                     authViewModel = authViewModel
                 )
             }
@@ -103,21 +106,22 @@ fun StudyBuddiesNavHost(
                 EditProfileScreen(
                     user = currentUser,
                     authViewModel = authViewModel,
-                    onNavigateBack = { navController.popBackStack() }
+                    onNavigateBack = { navController.popBackStack() } // Standard back button logic
                 )
             }
         }
 
         // --- TUTOR PUBLIC PROFILE ---
+        // Route includes a variable placeholder {tutorId}
         composable(
             route = "tutor_profile/{tutorId}",
             arguments = listOf(navArgument("tutorId") { type = NavType.StringType })
         ) { backStackEntry ->
+            // Extracting the tutorId from the navigation path
             val tutorId = backStackEntry.arguments?.getString("tutorId")
             if (tutorId != null) {
-                // PROFESSIONAL SYNC:
-                // We ensure that TutorPublicProfile uses the shared lessonsViewModel.
-                // When a booking occurs here, it immediately triggers updates in Home and Lessons.
+                // Syncing shared lessonsViewModel here allows bookings made on this screen
+                // to appear immediately in the "Lessons" and "Home" tabs.
                 TutorPublicProfile(
                     tutorId = tutorId,
                     navController = navController,
@@ -132,6 +136,7 @@ fun StudyBuddiesNavHost(
         }
 
         // --- CHAT DETAIL ---
+        // Passing specific ID for Firestore query and name for the TopBar title
         composable(
             route = "chat_detail/{chatId}/{chatName}",
             arguments = listOf(

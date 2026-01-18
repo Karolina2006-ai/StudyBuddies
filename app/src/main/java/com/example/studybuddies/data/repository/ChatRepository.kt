@@ -13,28 +13,38 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.tasks.await
 import java.util.UUID
 
+/**
+ * Singleton object that manages all chat-related data.
+ * Using an 'object' ensures we don't have multiple instances fighting over database listeners.
+ */
 object ChatRepository {
 
-    private val firestore = FirebaseFirestore.getInstance()
-    private val auth = FirebaseAuth.getInstance()
+    private val firestore = FirebaseFirestore.getInstance() // Direct access to the Firestore database
+    private val auth = FirebaseAuth.getInstance() // Access to current user authentication state
 
+    // StateFlow acts like a 'live stream' of data.
+    // This map stores messages indexed by their ChatId, so switching chats is instant.
     private val _messages = MutableStateFlow<Map<String, List<Message>>>(emptyMap())
     val messages: StateFlow<Map<String, List<Message>>> = _messages.asStateFlow()
 
+    // Holds the list of all conversations the user is currently involved in.
     private val _chats = MutableStateFlow<List<ChatData>>(emptyList())
     val chats: StateFlow<List<ChatData>> = _chats.asStateFlow()
 
-    // --- 1. INITIALIZE FUNCTION (Fixes issue in ChatViewModel) ---
+    // Entry point to start fetching data once we know who the user is.
     fun initialize(userId: String) {
-        loadChats(userId)
+        loadChats(userId) // Start the real-time listener for the inbox
     }
 
-    // --- 2. LOADING CHATS ---
+    /**
+     * Sets up a real-time listener for the user's active chats.
+     * If someone sends a message, the list updates automatically without refreshing.
+     */
     fun loadChats(userId: String) {
         Log.d("ChatRepo", "Loading chats for user: $userId")
 
         firestore.collection("chats")
-            .whereArrayContains("participants", userId)
+            .whereArrayContains("participants", userId) // Finds any chat where I am a member.
             .addSnapshotListener { snapshot, e ->
                 if (e != null) {
                     Log.e("ChatRepo", "Listen failed.", e)
@@ -42,7 +52,7 @@ object ChatRepository {
                 }
 
                 if (snapshot != null) {
-                    // First, sort documents by time while we have access to the timestamp
+                    // Sort by the newest message so the most active chat is at the top of the list.
                     val sortedDocs = snapshot.documents.sortedByDescending {
                         it.getLong("lastMessageTimestamp") ?: 0L
                     }
@@ -51,72 +61,83 @@ object ChatRepository {
                         val lastMsg = doc.getString("lastMessage") ?: "Start chatting"
                         val timestamp = doc.getLong("lastMessageTimestamp") ?: System.currentTimeMillis()
 
-                        // Logic to find the other participant's name
+                        // Logic to figure out the name of the 'other' person in the chat.
                         val participants = doc.get("participants") as? List<String> ?: emptyList()
                         val otherUserId = participants.find { it != userId } ?: "Unknown"
 
                         val namesMap = doc.get("participantNames") as? Map<String, String> ?: emptyMap()
                         val otherUserName = namesMap[otherUserId] ?: "User"
 
-                        // FIX: Using field names consistent with your ChatData model (message, time, unread)
                         ChatData(
                             id = doc.id,
                             name = otherUserName,
-                            message = lastMsg,           // Was 'lastMessage', fixed to 'message'
-                            time = formatTime(timestamp), // Was 'timestamp', fixed to 'time' (String)
-                            unread = 0                   // Was 'unreadCount', fixed to 'unread'
+                            message = lastMsg,
+                            time = formatTime(timestamp), // Convert the Long timestamp to a readable String.
+                            unread = 0 // Defaulting to 0 for UI initialization
                         )
                     }
 
-                    _chats.value = chatList
+                    _chats.value = chatList // Push the new list into the 'stream' for the UI to see.
                 }
             }
     }
 
-    // --- Helper function for time formatting (added because ChatData requires a String) ---
+    /**
+     * Converts raw milliseconds into human-friendly text like "5m ago".
+     */
     private fun formatTime(timestamp: Long): String {
         val diff = System.currentTimeMillis() - timestamp
         return when {
             diff < 60000 -> "Just now" // Less than a minute
-            diff < 3600000 -> "${diff / 60000}m ago" // Minutes ago
-            diff < 86400000 -> "${diff / 3600000}h ago" // Hours ago
-            else -> "Older" // Older
+            diff < 3600000 -> "${diff / 60000}m ago" // Minutes
+            diff < 86400000 -> "${diff / 3600000}h ago" // Hours
+            else -> "Older" // More than a day
         }
     }
 
+    /**
+     * Sets up a listener for a specific conversation's messages.
+     */
     fun observeMessages(chatId: String) {
         if (chatId.isEmpty()) return
 
         firestore.collection("chats").document(chatId)
             .collection("messages")
-            .orderBy("timestamp", Query.Direction.ASCENDING)
+            .orderBy("timestamp", Query.Direction.ASCENDING) // Oldest at top, newest at bottom.
             .addSnapshotListener { snapshot, e ->
                 if (e != null) return@addSnapshotListener
 
                 if (snapshot != null) {
+                    // Convert Firestore documents back into our 'Message' data class objects automatically.
                     val messageList = snapshot.toObjects(Message::class.java)
                     _messages.update { currentMap ->
-                        currentMap + (chatId to messageList)
+                        currentMap + (chatId to messageList) // Update the map with the latest conversation data
                     }
                 }
             }
     }
 
+    /**
+     * Logic for sending a message.
+     * It writes to the 'messages' sub-collection AND updates the parent 'chat' document.
+     */
     suspend fun sendMessage(chatId: String, text: String) {
         val currentUid = auth.currentUser?.uid ?: return
 
         val newMessage = Message(
-            id = UUID.randomUUID().toString(),
+            id = UUID.randomUUID().toString(), // Generate a unique ID locally
             senderId = currentUid,
             text = text,
             timestamp = System.currentTimeMillis()
         )
 
+        // Add the message to the specific conversation's sub-collection.
         firestore.collection("chats").document(chatId)
             .collection("messages")
             .add(newMessage)
-            .await()
+            .await() // Suspend until the database write is complete
 
+        // Update the 'preview' info in the main chat document for the inbox view.
         val chatUpdate = mapOf(
             "lastMessage" to text,
             "lastMessageTimestamp" to System.currentTimeMillis()
@@ -124,27 +145,28 @@ object ChatRepository {
         firestore.collection("chats").document(chatId).update(chatUpdate).await()
     }
 
-    fun markAsRead(chatId: String) {
-        // Optional implementation
-    }
-
+    /**
+     * Checks if a chat already exists between two users.
+     * If not, it creates a new document to hold their messages.
+     */
     suspend fun createChatIfNotExists(currentUserId: String, otherUserId: String, otherUserName: String): String {
         val query = firestore.collection("chats")
             .whereArrayContains("participants", currentUserId)
             .get()
             .await()
 
+        // Look through my existing chats to see if one already contains the other specific user.
         val existingChat = query.documents.find { doc ->
             val participants = doc.get("participants") as? List<String> ?: emptyList()
             participants.contains(otherUserId)
         }
 
         if (existingChat != null) {
-            return existingChat.id
+            return existingChat.id // Found it, return the existing ID.
         }
 
+        // None found, so let's create a brand new conversation document.
         val currentUserName = auth.currentUser?.displayName ?: "Me"
-
         val newChatRef = firestore.collection("chats").document()
         val chatData = hashMapOf(
             "participants" to listOf(currentUserId, otherUserId),
@@ -156,7 +178,16 @@ object ChatRepository {
             "lastMessageTimestamp" to System.currentTimeMillis()
         )
 
-        newChatRef.set(chatData).await()
-        return newChatRef.id
+        newChatRef.set(chatData).await() // Save the new chat metadata
+        return newChatRef.id // Return the new document ID for immediate navigation
+    }
+
+    /**
+     * Missing function from ViewModel: Updates the unread status for a chat.
+     */
+    suspend fun markAsRead(chatId: String) {
+        val currentUid = auth.currentUser?.uid ?: return
+        // Future Logic: Update unread counts in Firestore
+        Log.d("ChatRepo", "Marking chat $chatId as read for $currentUid")
     }
 }

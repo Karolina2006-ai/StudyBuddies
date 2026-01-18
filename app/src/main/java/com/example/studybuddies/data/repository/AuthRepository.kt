@@ -10,22 +10,24 @@ import kotlinx.coroutines.tasks.await
  * and profile data synchronization in Firestore.
  */
 class AuthRepository(
-    private val auth: FirebaseAuth,
-    private val firestore: FirebaseFirestore
+    private val auth: FirebaseAuth, // The service for login/register credentials.
+    private val firestore: FirebaseFirestore // The service for storing the user's profile info.
 ) {
-    // Retrieves the currently logged-in Firebase user
+    // Check if someone is already logged in so they don't have to see the login screen again.
     fun getCurrentUser(): FirebaseUser? = auth.currentUser
 
     /**
-     * Logs in an existing user.
+     * Logs in an existing user using Coroutines.
      */
     suspend fun login(email: String, pass: String): Result<FirebaseUser> {
         return try {
+            // .await() turns the Firebase "Task" into a synchronous-looking call that doesn't block the UI thread.
             val result = auth.signInWithEmailAndPassword(email, pass).await()
             val user = result.user
             if (user != null) Result.success(user)
             else Result.failure(Exception("Login failed: User is null"))
         } catch (e: Exception) {
+            // If the password is wrong or there's no internet, catch the error and return it.
             Result.failure(e)
         }
     }
@@ -33,7 +35,6 @@ class AuthRepository(
     /**
      * Complete user registration.
      * Creates an account in Firebase Auth, and then immediately creates a profile document in Firestore.
-     * Restored support for all fields required for the profile and tiles to work correctly.
      */
     suspend fun register(
         email: String,
@@ -49,12 +50,12 @@ class AuthRepository(
         subjects: List<String> = emptyList()
     ): Result<FirebaseUser> {
         return try {
-            // 1. Create account in Firebase Authentication
+            // Step 1: Create the "identity" in Firebase Authentication (Email/Password).
             val result = auth.createUserWithEmailAndPassword(email, pass).await()
             val user = result.user ?: return Result.failure(Exception("Registration failed: User is null"))
 
-            // 2. Prepare profile data for Firestore database
-            // These data are essential for tutor tiles to display correctly in the morning.
+            // Step 2: Prepare the "Profile" data.
+            // We do this because Firebase Auth only stores email/password, not things like 'city' or 'bio'.
             val userData = hashMapOf(
                 "uid" to user.uid,
                 "email" to email,
@@ -69,14 +70,15 @@ class AuthRepository(
                 "hobbies" to hobbies,
                 "subjects" to subjects,
                 "averageRating" to 0.0,
-                "hourlyRate" to 50.0, // Default rate for new tutors
+                "hourlyRate" to 50.0, // We give new tutors a default rate to start with.
                 "totalReviews" to 0,
                 "ratingStats" to mapOf("5" to 0, "4" to 0, "3" to 0, "2" to 0, "1" to 0),
                 "reviews" to emptyList<Any>(),
                 "availability" to emptyMap<String, List<String>>()
             )
 
-            // 3. Save document in "users" collection
+            // Step 3: Write the profile document to the "users" collection in Firestore.
+            // We use user.uid as the document name to link Auth and Firestore perfectly.
             firestore.collection("users").document(user.uid).set(userData).await()
 
             Result.success(user)
@@ -86,7 +88,7 @@ class AuthRepository(
     }
 
     /**
-     * Sends a password reset email.
+     * Standard Firebase function to help users who forgot their password.
      */
     suspend fun sendPasswordResetEmail(email: String): Result<Unit> {
         return try {
@@ -98,7 +100,7 @@ class AuthRepository(
     }
 
     /**
-     * Logs out the user.
+     * Simple logout function.
      */
     fun logout() {
         auth.signOut()

@@ -1,5 +1,6 @@
 package com.example.studybuddies.viewmodel
 
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.studybuddies.data.model.User
@@ -12,24 +13,27 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 
+// Represents the current state of authentication in the UI
 data class AuthState(
-    val isLoading: Boolean = false,
-    val currentUser: User? = null,
-    val isAuthenticated: Boolean = false,
-    val uid: String? = null,
-    val error: String? = null,
-    val isPasswordResetSent: Boolean = false
+    val isLoading: Boolean = false, // True when communicating with Firebase
+    val currentUser: User? = null, // The profile data from Firestore
+    val isAuthenticated: Boolean = false, // True if the user is successfully logged in
+    val uid: String? = null, // The unique Firebase ID
+    val error: String? = null, // Holds error messages for the student to see
+    val isPasswordResetSent: Boolean = false // Flag for password recovery success
 )
 
 class AuthViewModel(
-    private val authRepository: AuthRepository,
-    private val userRepository: UserRepository
+    private val authRepository: AuthRepository, // Handles Firebase Auth (Email/Pass)
+    private val userRepository: UserRepository // Handles Firestore (Profile data) and Storage (Images)
 ) : ViewModel() {
 
+    // Private mutable state and public immutable flow for UI observation
     private val _authState = MutableStateFlow(AuthState())
     val authState = _authState.asStateFlow()
 
     init {
+        // Automatically check if the user is already logged in when the app starts
         checkAuthStatus()
     }
 
@@ -40,6 +44,7 @@ class AuthViewModel(
 
             if (firebaseUser != null) {
                 try {
+                    // Fetch profile with a 10-second timeout limit
                     withTimeout(10000) {
                         val profile = userRepository.getUserProfile(firebaseUser.uid)
                         if (profile != null) {
@@ -52,6 +57,7 @@ class AuthViewModel(
                                 )
                             }
                         } else {
+                            // If user exists in Auth but not in Firestore, clean up
                             authRepository.logout()
                             _authState.update {
                                 it.copy(isAuthenticated = false, currentUser = null, uid = null, isLoading = false)
@@ -67,6 +73,7 @@ class AuthViewModel(
         }
     }
 
+    // Standard login flow: Authenticate then fetch profile
     fun loginUser(email: String, pass: String) {
         viewModelScope.launch {
             _authState.update { it.copy(isLoading = true, error = null) }
@@ -102,6 +109,7 @@ class AuthViewModel(
         }
     }
 
+    // Triggers Firebase password reset email
     fun resetPassword(email: String) {
         viewModelScope.launch {
             _authState.update { it.copy(isLoading = true, error = null) }
@@ -118,10 +126,12 @@ class AuthViewModel(
         }
     }
 
+    // Resets the UI state for the password recovery screen
     fun clearResetState() {
         _authState.update { it.copy(isPasswordResetSent = false, error = null) }
     }
 
+    // Force-refreshes the current user's profile data
     fun refreshUser() {
         val uid = authRepository.getCurrentUser()?.uid ?: return
         viewModelScope.launch {
@@ -134,12 +144,26 @@ class AuthViewModel(
         }
     }
 
-    fun updateUserProfile(user: User, onSuccess: () -> Unit) {
+    // Handles profile updates, including image upload to Storage
+    fun updateUserProfile(user: User, newImageUri: Uri?, onSuccess: () -> Unit) {
         viewModelScope.launch {
             _authState.update { it.copy(isLoading = true) }
             try {
-                userRepository.saveUserProfile(user)
-                _authState.update { it.copy(currentUser = user, isLoading = false) }
+                var finalUser = user
+
+                // STEP 1: If a new image was selected, upload it to Firebase Storage first
+                if (newImageUri != null) {
+                    val downloadUrl = userRepository.uploadProfileImage(user.uid, newImageUri)
+                    // Replace local URI with the public download URL
+                    finalUser = user.copy(profileImageUri = downloadUrl)
+                }
+
+                // STEP 2: Save the updated user object to Firestore
+                userRepository.saveUserProfile(finalUser)
+
+                // STEP 3: Update local state to reflect changes instantly in the UI
+                _authState.update { it.copy(currentUser = finalUser, isLoading = false) }
+
                 onSuccess()
             } catch (e: Exception) {
                 _authState.update { it.copy(isLoading = false, error = e.message) }
@@ -147,11 +171,7 @@ class AuthViewModel(
         }
     }
 
-    /**
-     * "OUT OF THE BOX" REGISTRATION:
-     * We use HashMap and ArrayList instead of emptyMap/emptyList to ensure Firebase does not crash on serialization.
-     * We also enforce Dispatchers.IO for thread safety.
-     */
+    // Registration flow: Creates Auth account then initializes Firestore document
     suspend fun register(
         email: String, pass: String, firstName: String, surname: String,
         role: String, city: String, university: String, telephone: String,
@@ -159,27 +179,17 @@ class AuthViewModel(
     ): Boolean {
         _authState.update { it.copy(isLoading = true, error = null) }
 
-        // 1. Register in Auth
         val result = authRepository.register(
-            email = email,
-            pass = pass,
-            firstName = firstName,
-            surname = surname,
-            role = role,
-            city = city,
-            university = university,
-            phone = telephone,
-            bio = bio,
-            hobbies = hobbies,
-            subjects = subjects
+            email = email, pass = pass, firstName = firstName, surname = surname,
+            role = role, city = city, university = university, phone = telephone,
+            bio = bio, hobbies = hobbies, subjects = subjects
         )
 
         return if (result.isSuccess) {
             val firebaseUser = result.getOrNull()
 
             if (firebaseUser != null) {
-                // 2. Create User object with type-safe collections (HashMap/ArrayList)
-                // This prevents crashes when saving empty fields to Firestore.
+                // Constructing the default User object for Firestore
                 val user = User(
                     uid = firebaseUser.uid,
                     email = email,
@@ -191,60 +201,41 @@ class AuthViewModel(
                     university = university,
                     telephone = telephone,
                     bio = bio,
-                    // FIX: Convert generic List to ArrayList explicitly
                     hobbies = ArrayList(hobbies),
                     subjects = ArrayList(subjects),
-                    hourlyRate = 50.0,
-                    // FIX: Use hashMapOf() instead of emptyMap()
+                    hourlyRate = 50.0, // Default price
                     availability = hashMapOf(),
-                    ratingStats = hashMapOf(
-                        "5" to 0L, "4" to 0L, "3" to 0L, "2" to 0L, "1" to 0L
-                    ),
-                    // FIX: Use arrayListOf() instead of emptyList()
+                    ratingStats = hashMapOf("5" to 0L, "4" to 0L, "3" to 0L, "2" to 0L, "1" to 0L),
                     reviews = arrayListOf(),
                     totalReviews = 0,
                     averageRating = 0.0
                 )
 
                 try {
-                    // 3. Save on IO thread (safe for network operations)
+                    // Switch to IO thread for network database operation
                     withContext(Dispatchers.IO) {
                         userRepository.saveUserProfile(user)
                     }
-
-                    // 4. Stabilization delay
-                    delay(1000)
-
-                    // 5. Update state
+                    delay(1000) // Small delay to ensure Firebase propagation
                     _authState.update {
-                        it.copy(
-                            isAuthenticated = true,
-                            currentUser = user,
-                            uid = firebaseUser.uid,
-                            isLoading = false
-                        )
+                        it.copy(isAuthenticated = true, currentUser = user, uid = firebaseUser.uid, isLoading = false)
                     }
                     true
                 } catch (e: Exception) {
-                    _authState.update {
-                        it.copy(isLoading = false, error = "Error saving profile: ${e.message}")
-                    }
+                    _authState.update { it.copy(isLoading = false, error = "Error saving profile: ${e.message}") }
                     false
                 }
             } else {
-                _authState.update {
-                    it.copy(isLoading = false, error = "UID Error.")
-                }
+                _authState.update { it.copy(isLoading = false, error = "UID Error.") }
                 false
             }
         } else {
-            _authState.update {
-                it.copy(isLoading = false, error = result.exceptionOrNull()?.message)
-            }
+            _authState.update { it.copy(isLoading = false, error = result.exceptionOrNull()?.message) }
             false
         }
     }
 
+    // Standard logout: Clears Auth and resets local state to default
     fun logout() {
         authRepository.logout()
         _authState.update { AuthState() }

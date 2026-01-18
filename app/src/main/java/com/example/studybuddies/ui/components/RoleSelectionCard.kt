@@ -20,16 +20,16 @@ import androidx.compose.ui.unit.sp
 /**
  * Reusable Role Selection Card.
  * Component used for selecting a role (Student/Tutor) during registration.
- * Follows design rules: No ripple effect, black descriptions, blue borders.
  */
 @Composable
 fun RoleSelectionCard(
-    title: String,
-    description: String,
-    iconRes: Int,
-    isSelected: Boolean,
-    onClick: () -> Unit
+    title: String,      // "I'm a Student" or "I'm a Tutor"
+    description: String,// Small text explaining what the role does
+    iconRes: Int,       // Resource ID for the drawable image (icon)
+    isSelected: Boolean,// State passed from the ViewModel/Screen to show if it's picked
+    onClick: () -> Unit // Lambda function to handle the click event
 ) {
+    // Custom colors to match the app's brand identity
     val logoBlue = Color(0xFF1A73E8)
     val lightBlueBg = Color(0xFFF0F5FF)
 
@@ -38,21 +38,24 @@ fun RoleSelectionCard(
             .fillMaxWidth()
             .height(210.dp)
             .clickable(
-                // Rule 2: Complete removal of the gray ripple effect on click
+                // We use 'remember' so the interaction source isn't recreated on every redraw.
                 interactionSource = remember { MutableInteractionSource() },
+                // Setting indication to 'null' removes the standard gray 'ripple' effect.
+                // This makes the UI feel cleaner and more professional.
                 indication = null,
                 onClick = onClick
             ),
         shape = RoundedCornerShape(16.dp),
-        // Blue border when selected
+        // The border gets thicker and turns blue when the card is selected.
         border = BorderStroke(
             width = if (isSelected) 3.dp else 1.dp,
             color = logoBlue
         ),
+        // If selected, the background turns a soft light blue.
         colors = CardDefaults.cardColors(
             containerColor = if (isSelected) lightBlueBg else Color.White
         ),
-        elevation = CardDefaults.cardElevation(0.dp)
+        elevation = CardDefaults.cardElevation(0.dp) // Flat design style
     ) {
         Column(
             modifier = Modifier
@@ -63,16 +66,16 @@ fun RoleSelectionCard(
         ) {
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Role Icon
+            // Displays the student/tutor illustration.
             Image(
                 painter = painterResource(id = iconRes),
-                contentDescription = null,
+                contentDescription = null, // Decorative image, so null description is fine.
                 modifier = Modifier.size(100.dp)
             )
 
             Spacer(modifier = Modifier.height(4.dp))
 
-            // Title (e.g., "I'm a Student") - Blue
+            // The main Label (Role Name).
             Text(
                 text = title,
                 fontWeight = FontWeight.Bold,
@@ -80,7 +83,7 @@ fun RoleSelectionCard(
                 fontSize = 22.sp
             )
 
-            // Description - Black (Rule 1)
+            // The helper description in standard black text.
             Text(
                 text = description,
                 color = Color.Black,

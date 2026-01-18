@@ -14,31 +14,31 @@ import androidx.core.view.WindowCompat
 // --- Material 3 Color Scheme Mapping ---
 
 private val LightColorScheme = lightColorScheme(
-    primary = StudyBuddiesPrimary,       // Button background (Blue)
-    onPrimary = Color.White,             // <--- FIX: White text on buttons
+    primary = StudyBuddiesPrimary,       // The main brand blue used for buttons and key actions
+    onPrimary = Color.White,             // Ensures text on top of blue buttons is white and readable
 
-    primaryContainer = StudyBuddiesLightBlue,
-    onPrimaryContainer = StudyBuddiesPrimary,
+    primaryContainer = StudyBuddiesLightBlue, // Used for highlighted background areas
+    onPrimaryContainer = StudyBuddiesPrimary, // Text color used inside primary containers
 
-    secondary = StudyBuddiesAccent,
-    onSecondary = Color.White,
+    secondary = StudyBuddiesAccent,      // Accent green for status and secondary highlights
+    onSecondary = Color.White,           // Text color used on top of green elements
 
-    // App Backgrounds - forced White
+    // App Backgrounds - specifically forced to White for a clean, modern look
     background = Color.White,
-    onBackground = Color.Black,          // Text on screens (Black)
+    onBackground = Color.Black,          // Primary text color for screen content
 
-    surface = Color.White,
-    onSurface = Color.Black,             // Text on cards (Black)
+    surface = Color.White,               // Background color for cards and menus
+    onSurface = Color.Black,             // Text color for content placed on cards
 
-    outline = StudyBuddiesOutline,
-    surfaceVariant = StudyBuddiesLightBlue,
-    onSurfaceVariant = Color.Black,
+    outline = StudyBuddiesOutline,       // Color used for borders and thin divider lines
+    surfaceVariant = StudyBuddiesLightBlue, // Alternative surface color for subtle contrast
+    onSurfaceVariant = Color.Black,      // Content color for surface variants
 
-    error = Color(0xFFB00020),
-    onError = Color.White
+    error = Color(0xFFB00020),           // Standard red for error messages and alerts
+    onError = Color.White                // White text for high visibility on red backgrounds
 )
 
-// Dark Mode - preserved from your file, but currently unused
+// Dark Mode configuration - preserved for future implementation but currently inactive
 private val DarkColorScheme = darkColorScheme(
     primary = DarkPrimary,
     onPrimary = Color.Black,
@@ -50,26 +50,28 @@ private val DarkColorScheme = darkColorScheme(
 
 @Composable
 fun StudyBuddiesTheme(
-    darkTheme: Boolean = false, // Parameter ignored to enforce Light Mode
-    content: @Composable () -> Unit
+    darkTheme: Boolean = false, // This parameter is currently ignored to enforce a Light Theme
+    content: @Composable () -> Unit // The UI content that will be styled by this theme
 ) {
-    // Select scheme (Logic forces LightColorScheme for consistency)
+    // Selection logic - currently hardcoded to Light for brand consistency
     val colorScheme = LightColorScheme
-    val view = LocalView.current
+    val view = LocalView.current // Accessing the current view to modify system windows
 
     if (!view.isInEditMode) {
+        // Runs whenever the theme is applied to update the system status bar
         SideEffect {
             val window = (view.context as Activity).window
-            // White status bar
+            // Set the system status bar color to White to match the app header
             window.statusBarColor = Color.White.toArgb()
-            // Dark icons on the status bar (so they are visible on white)
+            // Configure status bar icons to be Dark so they are visible on the white background
             WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = true
         }
     }
 
+    // Applying the calculated colors and typography to the entire application
     MaterialTheme(
         colorScheme = colorScheme,
-        typography = Typography, // References Type.kt
+        typography = Typography, // References the custom fonts defined in Type.kt
         content = content
     )
 }

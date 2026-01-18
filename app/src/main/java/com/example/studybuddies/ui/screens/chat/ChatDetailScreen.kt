@@ -15,9 +15,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.AttachFile
-import androidx.compose.material.icons.filled.Send // FIX: Changed to standard Send icon for compatibility
-import androidx.compose.material3.* // Imports everything from Material3, including Text and OutlinedTextField
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Send
+import androidx.compose.material3.* import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -34,12 +33,12 @@ import com.example.studybuddies.viewmodel.ChatViewModel
 import com.google.firebase.auth.FirebaseAuth
 import com.example.studybuddies.data.model.Message
 
-// Custom Indication to disable ripple (No wave effect on click)
+// Custom Indication to disable ripple (removes the default Material wave effect on clicks)
 private object NoIndication : IndicationNodeFactory {
     override fun create(interactionSource: InteractionSource): DelegatableNode {
         return object : Modifier.Node(), DrawModifierNode {
             override fun ContentDrawScope.draw() {
-                drawContent()
+                drawContent() // Simply draws the content without adding visual feedback layers
             }
         }
     }
@@ -47,27 +46,29 @@ private object NoIndication : IndicationNodeFactory {
     override fun hashCode(): Int = System.identityHashCode(this)
 }
 
-@OptIn(ExperimentalMaterial3Api::class) // Added in case your M3 version requires it
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatDetailScreen(
-    chatId: String,
-    chatName: String,
-    viewModel: ChatViewModel,
-    onBack: () -> Unit
+    chatId: String, // ID of the specific conversation
+    chatName: String, // Name of the person you are chatting with
+    viewModel: ChatViewModel, // Shared chat logic
+    onBack: () -> Unit // Navigation back to the list
 ) {
-    val context = LocalContext.current // Needed for Toast (attachment button)
-    val logoBlue = Color(0xFF1A73E8)
+    val context = LocalContext.current
+    val logoBlue = Color(0xFF1A73E8) // Standard app theme color
     val lightBlueBg = Color(0xFFF0F5FF)
 
+    // Observe messages for this specific chat ID from the global state
     val allMessages by viewModel.messages.collectAsStateWithLifecycle()
     val messages = allMessages[chatId] ?: emptyList()
 
+    // Identify the current user to distinguish between "Sent" and "Received" bubbles
     val currentUserId = remember { FirebaseAuth.getInstance().currentUser?.uid }
 
-    var messageText by remember { mutableStateOf("") }
-    val listState = rememberLazyListState()
+    var messageText by remember { mutableStateOf("") } // Local state for the text input
+    val listState = rememberLazyListState() // Controls the scroll position of the message list
 
-    // Auto-scroll to bottom on new message
+    // EFFECT: Automatically scroll to the bottom whenever a new message arrives
     LaunchedEffect(messages.size) {
         if (messages.isNotEmpty()) {
             listState.animateScrollToItem(messages.size - 1)
@@ -81,7 +82,7 @@ fun ChatDetailScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .statusBarsPadding()
+                        .statusBarsPadding() // Ensures the TopBar doesn't hide under the system clock/icons
                         .padding(horizontal = 8.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -94,7 +95,7 @@ fun ChatDetailScreen(
                         }
                     }
 
-                    // --- INITIALS CIRCLE ---
+                    // --- AVATAR / INITIALS ---
                     Box(
                         modifier = Modifier
                             .size(40.dp)
@@ -102,7 +103,7 @@ fun ChatDetailScreen(
                             .background(lightBlueBg),
                         contentAlignment = Alignment.Center
                     ) {
-                        // Splits name (e.g. "John D") and takes "JD"
+                        // Logic to create a 2-letter uppercase initials placeholder
                         val initials = chatName.trim().split(" ")
                             .mapNotNull { it.firstOrNull()?.toString() }
                             .take(2)
@@ -130,7 +131,7 @@ fun ChatDetailScreen(
             }
         },
         bottomBar = {
-            // --- TYPING BAR ---
+            // --- INPUT AREA ---
             Surface(
                 color = Color.White,
                 shadowElevation = 8.dp,
@@ -139,11 +140,10 @@ fun ChatDetailScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .navigationBarsPadding() // Spacing from system bottom bar
+                        .navigationBarsPadding() // Adjusts for the system home gesture bar
                         .padding(horizontal = 16.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Attachment Icon
                     IconButton(
                         onClick = { Toast.makeText(context, "Attachments coming soon!", Toast.LENGTH_SHORT).show() },
                         modifier = Modifier.size(24.dp)
@@ -153,15 +153,13 @@ fun ChatDetailScreen(
 
                     Spacer(Modifier.width(12.dp))
 
-                    // IMPROVED OutlinedTextField
-                    // Removed specific text colors that might cause errors in older M3 versions,
-                    // kept key container and border colors.
+                    // Text Input Field
                     OutlinedTextField(
                         value = messageText,
                         onValueChange = { messageText = it },
                         modifier = Modifier
-                            .weight(1f)
-                            .heightIn(min = 48.dp, max = 120.dp),
+                            .weight(1f) // Takes up remaining horizontal space
+                            .heightIn(min = 48.dp, max = 120.dp), // Expands as user types multiple lines
                         placeholder = { Text("Message...", color = Color.Gray, fontSize = 14.sp) },
                         shape = RoundedCornerShape(24.dp),
                         colors = OutlinedTextFieldDefaults.colors(
@@ -170,27 +168,25 @@ fun ChatDetailScreen(
                             focusedContainerColor = Color(0xFFF8F9FA),
                             unfocusedContainerColor = Color(0xFFF8F9FA),
                             cursorColor = logoBlue
-                            // focusedTextColor and unfocusedTextColor removed for compatibility.
-                            // Text will default to black thanks to app theme.
                         ),
-                        singleLine = false // Changed to false so users can write multi-line messages
+                        singleLine = false // Allows the message box to expand vertically
                     )
 
                     Spacer(Modifier.width(8.dp))
 
+                    // SEND BUTTON
                     CompositionLocalProvider(LocalIndication provides NoIndication) {
                         IconButton(
                             onClick = {
                                 if (messageText.isNotBlank()) {
                                     viewModel.sendMessage(chatId, messageText.trim())
-                                    messageText = ""
+                                    messageText = "" // Clear input after sending
                                 }
                             },
-                            enabled = messageText.isNotBlank(),
+                            enabled = messageText.isNotBlank(), // Button is grayed out if empty
                             interactionSource = remember { MutableInteractionSource() }
                         ) {
                             Icon(
-                                // Using standard Send icon (safer than AutoMirrored)
                                 imageVector = Icons.Default.Send,
                                 contentDescription = null,
                                 tint = if (messageText.isNotBlank()) logoBlue else Color.LightGray
@@ -201,11 +197,12 @@ fun ChatDetailScreen(
             }
         }
     ) { padding ->
+        // --- MESSAGE LIST ---
         LazyColumn(
-            state = listState,
+            state = listState, // Attach scroll state
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding) // Respects TopBar
+                .padding(padding)
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
             contentPadding = PaddingValues(bottom = 16.dp)
@@ -218,17 +215,21 @@ fun ChatDetailScreen(
     }
 }
 
+/**
+ * Visual component for a single message bubble.
+ */
 @Composable
 fun ChatBubble(text: String, isMe: Boolean, logoBlue: Color) {
     Column(
         modifier = Modifier.fillMaxWidth(),
-        horizontalAlignment = if (isMe) Alignment.End else Alignment.Start
+        horizontalAlignment = if (isMe) Alignment.End else Alignment.Start // Sent = Right, Received = Left
     ) {
         Surface(
-            color = if (isMe) logoBlue else Color(0xFFF1F3F4),
+            color = if (isMe) logoBlue else Color(0xFFF1F3F4), // Sent = Blue, Received = Gray
             shape = RoundedCornerShape(
                 topStart = 16.dp,
                 topEnd = 16.dp,
+                // Tail of the bubble points to the sender
                 bottomStart = if (isMe) 16.dp else 4.dp,
                 bottomEnd = if (isMe) 4.dp else 16.dp
             )

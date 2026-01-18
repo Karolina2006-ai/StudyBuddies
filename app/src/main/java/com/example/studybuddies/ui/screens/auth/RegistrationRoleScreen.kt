@@ -14,11 +14,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
 import com.example.studybuddies.R
 
+/**
+ * Screen that allows the user to choose between being a Student or a Tutor.
+ * This choice determines the profile layout and available features later in the app.
+ */
 @Composable
 fun RegistrationRoleScreen(
-    onNavigateToDetails: (String) -> Unit,
-    onBack: () -> Unit
+    onNavigateToDetails: (String) -> Unit, // Callback to pass the chosen role to the next screen
+    onBack: () -> Unit // Callback to return to the Login screen
 ) {
+    // Brand color definition
     val logoBlue = Color(0xFF1A73E8)
 
     Column(
@@ -28,15 +33,17 @@ fun RegistrationRoleScreen(
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        // Top spacing for visual balance
         Spacer(Modifier.height(40.dp))
 
-        // Main App Logo
+        // Application Logo
         Image(
             painter = painterResource(R.drawable.ic_logo),
-            contentDescription = null,
+            contentDescription = null, // Decorative image
             modifier = Modifier.size(100.dp)
         )
 
+        // Main Header
         Text(
             text = "Join Study Buddies",
             fontSize = 32.sp,
@@ -45,6 +52,7 @@ fun RegistrationRoleScreen(
             modifier = Modifier.padding(top = 24.dp)
         )
 
+        // Sub-header instructions
         Text(
             text = "Choose your primary role",
             color = Color.Black,
@@ -54,29 +62,30 @@ fun RegistrationRoleScreen(
 
         Spacer(Modifier.height(32.dp))
 
-        // STUDENT CARD
+        // SELECTION OPTION: STUDENT
         SimpleRoleCard(
             title = "Student",
             description = "I want to learn from tutors",
             iconRes = R.drawable.ic_student_graphic,
             logoBlue = logoBlue,
-            onClick = { onNavigateToDetails("Student") }
+            onClick = { onNavigateToDetails("Student") } // Pass role string to the next stage
         )
 
         Spacer(Modifier.height(20.dp))
 
-        // TUTOR CARD
+        // SELECTION OPTION: TUTOR
         SimpleRoleCard(
             title = "Tutor",
             description = "I want to help students learn",
             iconRes = R.drawable.ic_tutor_graphic,
             logoBlue = logoBlue,
-            onClick = { onNavigateToDetails("Tutor") }
+            onClick = { onNavigateToDetails("Tutor") } // Pass role string to the next stage
         )
 
+        // Push the footer to the bottom of the screen
         Spacer(Modifier.weight(1f))
 
-        // "Already have an account? Login" link (Ripple disabled)
+        // Link to navigate back to login
         Text(
             text = buildAnnotatedString {
                 append("Already have an account? ")
@@ -88,6 +97,7 @@ fun RegistrationRoleScreen(
             fontSize = 15.sp,
             modifier = Modifier
                 .clickable(
+                    // interactionSource + indication = null removes the gray 'ripple' box on click
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null
                 ) { onBack() }
@@ -96,6 +106,10 @@ fun RegistrationRoleScreen(
     }
 }
 
+/**
+ * Custom Card component representing a role choice.
+ * Encapsulates design logic for the role selection buttons.
+ */
 @Composable
 fun SimpleRoleCard(
     title: String,
@@ -107,29 +121,30 @@ fun SimpleRoleCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .height(185.dp) // Height adapted to the 86.dp icon
+            .height(185.dp) // Specific height to accommodate the icon size
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
             ) { onClick() },
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        border = BorderStroke(1.5.dp, logoBlue.copy(alpha = 0.8f))
+        border = BorderStroke(1.5.dp, logoBlue.copy(alpha = 0.8f)) // Subtly transparent border
     ) {
         Column(
             modifier = Modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // SIZE: 86.dp (reduced by 10% from 96.dp as requested)
+            // Visual representation of the role
             Image(
                 painter = painterResource(iconRes),
                 contentDescription = null,
-                modifier = Modifier.size(86.dp)
+                modifier = Modifier.size(86.dp) // Carefully sized to fit the card layout
             )
 
             Spacer(Modifier.height(12.dp))
 
+            // Role Title
             Text(
                 text = title,
                 fontSize = 24.sp,
@@ -137,6 +152,7 @@ fun SimpleRoleCard(
                 color = logoBlue
             )
 
+            // Role Explanation
             Text(
                 text = description,
                 fontSize = 14.sp,
