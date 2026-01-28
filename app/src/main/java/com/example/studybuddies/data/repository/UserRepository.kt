@@ -19,8 +19,8 @@ import kotlinx.coroutines.tasks.await
 import java.util.UUID
 
 /**
- * Repository handling user data, lessons, and communication.
- * This acts as the Single Source of Truth for all database operations.
+ * Repository handling user data, lessons, and communication
+ * This acts as the Single "Source of Truth" for all database operations
  */
 class UserRepository(
     private val firestore: FirebaseFirestore
@@ -46,7 +46,7 @@ class UserRepository(
     }
 
     /**
-     * Fetches a single user by UID. Forced to SERVER source to ensure the latest data.
+     * Fetches a single user by UID. Forced to SERVER source to ensure the latest data
      */
     suspend fun getUserProfile(uid: String): User? {
         return try {
@@ -58,7 +58,7 @@ class UserRepository(
     }
 
     /**
-     * Returns all users from the 'users' collection.
+     * Returns all users from the 'users' collection
      */
     suspend fun getAllTutors(): List<User> {
         return try {
@@ -71,7 +71,7 @@ class UserRepository(
     }
 
     /**
-     * UPDATED: Saves the tutor's available time slots.
+     * Saves the tutor's available time slots
      */
     suspend fun saveUserAvailability(uid: String, availability: Map<String, List<String>>) {
         try {
@@ -82,7 +82,7 @@ class UserRepository(
     }
 
     /**
-     * UPDATED: Updates the tutor's price per hour.
+     * Updates the tutor's price per hour.
      */
     suspend fun updateHourlyRate(uid: String, rate: Double) {
         try {
@@ -93,7 +93,7 @@ class UserRepository(
     }
 
     /**
-     * UPDATED: Saves the user's notification preferences (e.g., 1 hour before lesson).
+     * Saves the user's notification preferences (e.g., 1 hour before lesson).
      */
     suspend fun updateNotificationSettings(uid: String, prefs: Map<String, Boolean>) {
         try {
@@ -103,11 +103,11 @@ class UserRepository(
         }
     }
 
-    // --- REVIEWS & RATING LOGIC ---
+    // REVIEWS & RATING LOGIC
 
     /**
-     * Uses a 'Transaction' to ensure data integrity when adding a review.
-     * This recalculates the average rating and star stats atomically.
+     * Uses a 'Transaction' to ensure data integrity when adding a review
+     * This recalculates the average rating and star stats atomically
      */
     suspend fun addReviewToTutor(tutorUid: String, review: ReviewData) {
         val tutorRef = usersCollection.document(tutorUid)
@@ -140,7 +140,7 @@ class UserRepository(
         }
     }
 
-    // --- BOOKING & CANCELLATION ---
+    // BOOKING & CANCELLATION
 
     suspend fun bookLesson(tutorUid: String, studentUid: String, day: String, time: String, subject: String) {
         try {
@@ -167,8 +167,8 @@ class UserRepository(
     }
 
     /**
-     * Performs a 'Soft Delete' by updating status to 'Cancelled'.
-     * This preserves historical data for the user's records.
+     * Updating status to 'Cancelled'
+     * This preserves historical data for the user's records
      */
     suspend fun cancelLesson(lessonId: String) {
         try {
@@ -181,7 +181,7 @@ class UserRepository(
         }
     }
 
-    // --- PROFILE PICTURE ---
+    // PROFILE PICTURE
 
     /**
      * Uploads an image to Firebase Storage and returns the public download URL.

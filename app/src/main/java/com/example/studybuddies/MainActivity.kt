@@ -43,9 +43,6 @@ import com.example.studybuddies.viewmodel.*
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 
-/**
- * Global disable of the Ripple effect for a clean, brand-consistent UI look.
- */
 private object NoIndication : IndicationNodeFactory {
     override fun create(interactionSource: InteractionSource): DelegatableNode {
         return object : Modifier.Node(), DrawModifierNode {

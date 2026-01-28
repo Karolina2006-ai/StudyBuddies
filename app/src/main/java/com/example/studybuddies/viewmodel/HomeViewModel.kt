@@ -22,7 +22,7 @@ data class HomeUiState(
     val recommendedTutors: List<User> = emptyList(), // List of suggested teachers
     val upcomingLessons: List<Lesson> = emptyList(), // The student's next scheduled sessions
     val isLoading: Boolean = false, // Controls the visibility of the loading spinner
-    val userName: String = "" // Personalized greeting (e.g., "Hello, Mark!")
+    val userName: String = "" // Personalized greeting (e.g., "Hello, Karolina!")
 )
 
 class HomeViewModel(
@@ -39,7 +39,7 @@ class HomeViewModel(
 
     private var lessonsListener: ListenerRegistration? = null // Reference to the active Firebase listener
 
-    // Session Guardian: Reacts whenever the user logs in or out
+    // Checks the session: Reacts whenever the user logs in or out
     private val authStateListener = FirebaseAuth.AuthStateListener { firebaseAuth ->
         val uid = firebaseAuth.currentUser?.uid
         if (uid != null) {
@@ -61,7 +61,7 @@ class HomeViewModel(
 
     /**
      * PROCESS 1: REAL-TIME LESSONS
-     * Updates the UI immediately upon receiving database changes.
+     * Updates the UI immediately upon receiving database changes
      */
     private fun observeLessonsRealtime(uid: String) {
         lessonsListener?.remove() // Clean up any old listeners before starting a new one
@@ -100,7 +100,7 @@ class HomeViewModel(
 
     /**
      * PROCESS 2: STATIC DATA (Tutors, Profile)
-     * Runs in the background without blocking the lesson stream.
+     * Runs in the background without blocking the lesson stream
      */
     private fun loadUserProfileAndTutors(uid: String) {
         viewModelScope.launch {

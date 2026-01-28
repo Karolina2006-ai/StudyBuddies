@@ -252,8 +252,8 @@ class LessonsViewModel(
     }
 
     /**
-     * Updates the tutor's hourly rate in Firestore.
-     * Launches a coroutine to handle the database write operation.
+     * Updates the tutor's hourly rate in Firestore
+     * Launches a coroutine to handle the database write operation
      */
     fun updateHourlyRate(newRate: Double) {
         viewModelScope.launch {

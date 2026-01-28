@@ -33,8 +33,8 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 /**
- * Screen displaying the personal lesson calendar and booked sessions.
- * Real-time list updates are handled via derivedStateOf and LazyColumn keys.
+ * Screen displaying the personal lesson calendar and booked sessions
+ * Real-time list updates are handled via derivedStateOf and LazyColumn keys
  */
 @Composable
 fun LessonsScreen(
@@ -257,7 +257,7 @@ fun LessonsScreen(
 }
 
 /**
- * Custom Card component displaying lesson details and status.
+ * Card component displaying lesson details and status.
  */
 @Composable
 fun LessonCard(
@@ -371,7 +371,7 @@ fun LessonCard(
 }
 
 /**
- * Custom Tab Button for the switcher row.
+ * Custom Tab Button for the switcher row
  */
 @Composable
 fun RowScope.TabButton(text: String, isSelected: Boolean, activeColor: Color, onClick: () -> Unit) {
@@ -394,7 +394,7 @@ fun RowScope.TabButton(text: String, isSelected: Boolean, activeColor: Color, on
 }
 
 /**
- * Toggle row for the Notification Preferences dialog.
+ * Toggle row for the Notification Preferences dialog
  */
 @Composable
 fun ReminderToggle(title: String, checked: Boolean, activeColor: Color, onCheckedChange: (Boolean) -> Unit) {

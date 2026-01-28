@@ -103,7 +103,7 @@ fun RegistrationDetailsScreen(
         Text("Complete your profile", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = logoBlue)
         Text("Registering as a $role", color = Color.Black, modifier = Modifier.padding(top = 4.dp, bottom = 20.dp))
 
-        // Profile Picture Upload Area
+        // Uploading the profile picture
         Box(
             modifier = Modifier
                 .size(100.dp)
@@ -230,7 +230,7 @@ fun RegistrationDetailsScreen(
                         hobbies = hobbiesAndInterests.split(",").map { it.trim() }.filter { it.isNotEmpty() },
                         subjects = selectedSubjects.toList()
                     )
-                    // If login/reg fails, state error is shown; if success, MainActivity re-navigates.
+                    // If login/reg fails, state error is shown. If success, MainActivity re-navigates
                     if (!isSuccess) {
                         Toast.makeText(context, authState.error ?: "Registration Failed", Toast.LENGTH_SHORT).show()
                     }

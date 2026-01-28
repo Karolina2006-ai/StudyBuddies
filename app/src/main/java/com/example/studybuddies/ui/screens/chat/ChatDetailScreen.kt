@@ -222,7 +222,7 @@ fun ChatDetailScreen(
 fun ChatBubble(text: String, isMe: Boolean, logoBlue: Color) {
     Column(
         modifier = Modifier.fillMaxWidth(),
-        horizontalAlignment = if (isMe) Alignment.End else Alignment.Start // Sent = Right, Received = Left
+        horizontalAlignment = if (isMe) Alignment.End else Alignment.Start // Sent = Right, Received = Left (like in messenger or whatsapp)
     ) {
         Surface(
             color = if (isMe) logoBlue else Color(0xFFF1F3F4), // Sent = Blue, Received = Gray

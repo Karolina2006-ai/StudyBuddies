@@ -12,8 +12,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
 /**
- * State class for the Search Screen.
- * Separates the 'allTutors' (cached from DB) from 'filteredTutors' (visible to user).
+ * State class for the Search Screen
+ * Separates the 'allTutors' (cached from DB) from 'filteredTutors' (visible to user)
  */
 data class SearchUiState(
     val searchQuery: String = "",
@@ -41,8 +41,8 @@ class SearchViewModel(private val userRepository: UserRepository) : ViewModel() 
     }
 
     /**
-     * Initializes a real-time listener on the 'users' collection.
-     * Automatically excludes the current user and non-tutor accounts.
+     * Initializes a real-time listener on the 'users' collection
+     * Automatically excludes the current user and non-tutor accounts
      */
     private fun loadTutorsRealtime() {
         val currentUid = auth.currentUser?.uid
@@ -84,7 +84,7 @@ class SearchViewModel(private val userRepository: UserRepository) : ViewModel() 
     }
 
     /**
-     * Finds a tutor by ID and adds them to the "Recent" list.
+     * Finds a tutor by ID and adds them to the "Recent" list
      */
     fun getTutorById(uid: String): User? {
         val tutor = _uiState.value.allTutors.find { it.uid == uid }
@@ -95,7 +95,7 @@ class SearchViewModel(private val userRepository: UserRepository) : ViewModel() 
     }
 
     /**
-     * Internal logic to manage the 'Recently Viewed' list, limited to 5 items.
+     * Internal logic to manage the 'Recently Viewed' list, limited to 5 items
      */
     private fun addToRecent(tutor: User) {
         if (tutor.uid == _uiState.value.currentUserUid) return
@@ -109,7 +109,7 @@ class SearchViewModel(private val userRepository: UserRepository) : ViewModel() 
     }
 
     /**
-     * Updates the search query and triggers a new filter pass.
+     * Updates the search query and triggers a new filter pass
      */
     fun onSearchQueryChanged(query: String) {
         _uiState.update { it.copy(searchQuery = query) }
@@ -117,14 +117,14 @@ class SearchViewModel(private val userRepository: UserRepository) : ViewModel() 
     }
 
     /**
-     * Shows or hides the filter bottom sheet.
+     * Shows or hides the filter bottom sheet
      */
     fun toggleFilters() {
         _uiState.update { it.copy(showFilters = !it.showFilters) }
     }
 
     /**
-     * Applies complex filters selected by the user.
+     * Applies complex filters selected by the user
      */
     fun updateFilters(price: String, mode: String, availability: String, location: String) {
         _uiState.update {
@@ -140,8 +140,8 @@ class SearchViewModel(private val userRepository: UserRepository) : ViewModel() 
     }
 
     /**
-     * Main Filtering Logic.
-     * Handles keyword matching across name/subjects and range-based price checks.
+     * Main Filtering Logic
+     * Handles keyword matching across name/subjects and range-based price checks
      */
     private fun applyFilters() {
         val s = _uiState.value

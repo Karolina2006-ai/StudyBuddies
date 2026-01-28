@@ -11,7 +11,6 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
-// --- Material 3 Color Scheme Mapping ---
 
 private val LightColorScheme = lightColorScheme(
     primary = StudyBuddiesPrimary,       // The main brand blue used for buttons and key actions

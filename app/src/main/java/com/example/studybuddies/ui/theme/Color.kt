@@ -2,7 +2,7 @@ package com.example.studybuddies.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// --- Study Buddies Brand Colors (Rule 6) ---
+// --- Study Buddies Brand Colors  ---
 
 // Main Blue (0xFF1A73E8) - The primary brand identity used for buttons and active states
 val StudyBuddiesPrimary = Color(0xFF1A73E8)

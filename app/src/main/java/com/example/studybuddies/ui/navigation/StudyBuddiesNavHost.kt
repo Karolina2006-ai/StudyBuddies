@@ -19,9 +19,9 @@ import com.example.studybuddies.ui.screens.profile.EditProfileScreen
 import com.example.studybuddies.viewmodel.*
 
 /**
- * Main Navigation Host for Study Buddies.
- * Updated: Ensures all destinations use the synchronized ViewModel instances
- * passed from MainActivity to guarantee real-time UI updates across the app.
+ * Main Navigation Host for Study Buddies
+ * Ensures all destinations use the synchronized ViewModel instances
+ * passed from MainActivity to ensure real-time UI updates across the app
  */
 @Composable
 fun StudyBuddiesNavHost(

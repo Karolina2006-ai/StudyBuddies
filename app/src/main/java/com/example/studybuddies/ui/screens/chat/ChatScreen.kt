@@ -29,7 +29,7 @@ fun ChatScreen(
     onChatClick: (String, String) -> Unit // Navigates to details, passing the conversation ID and Name
 ) {
     val logoBlue = Color(0xFF1A73E8)
-    var searchQuery by remember { mutableStateOf("") } // Stores the current search text locally
+    var searchQuery by remember { mutableStateOf("") } // Stores the current search text locally (we can search other users that we want to write to)
 
     // Obtains a lifecycle-aware stream of chat data from the ViewModel/Firestore
     val chatList by viewModel.chats.collectAsStateWithLifecycle()

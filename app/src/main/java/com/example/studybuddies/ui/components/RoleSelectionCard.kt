@@ -18,8 +18,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 /**
- * Reusable Role Selection Card.
- * Component used for selecting a role (Student/Tutor) during registration.
+ * Reusable Role Selection Card
+ * Component used for selecting a role (Student/Tutor) during registration
  */
 @Composable
 fun RoleSelectionCard(
@@ -27,9 +27,9 @@ fun RoleSelectionCard(
     description: String,// Small text explaining what the role does
     iconRes: Int,       // Resource ID for the drawable image (icon)
     isSelected: Boolean,// State passed from the ViewModel/Screen to show if it's picked
-    onClick: () -> Unit // Lambda function to handle the click event
+    onClick: () -> Unit // Lambda function to handle the click
 ) {
-    // Custom colors to match the app's brand identity
+    // Custom colors
     val logoBlue = Color(0xFF1A73E8)
     val lightBlueBg = Color(0xFFF0F5FF)
 
@@ -38,20 +38,20 @@ fun RoleSelectionCard(
             .fillMaxWidth()
             .height(210.dp)
             .clickable(
-                // We use 'remember' so the interaction source isn't recreated on every redraw.
+                // We use 'remember' so the interaction source isn't recreated on every redraw
                 interactionSource = remember { MutableInteractionSource() },
-                // Setting indication to 'null' removes the standard gray 'ripple' effect.
-                // This makes the UI feel cleaner and more professional.
+                // Setting indication to 'null' removes the standard gray 'ripple' effect
+                // So the UI will be cleaner and more professional
                 indication = null,
                 onClick = onClick
             ),
         shape = RoundedCornerShape(16.dp),
-        // The border gets thicker and turns blue when the card is selected.
+        // The border gets thicker and turns blue when the card is selected
         border = BorderStroke(
             width = if (isSelected) 3.dp else 1.dp,
             color = logoBlue
         ),
-        // If selected, the background turns a soft light blue.
+        // If selected, the background turns a soft light blue
         colors = CardDefaults.cardColors(
             containerColor = if (isSelected) lightBlueBg else Color.White
         ),
@@ -66,10 +66,10 @@ fun RoleSelectionCard(
         ) {
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Displays the student/tutor illustration.
+            // Displays the student/tutor illustration
             Image(
                 painter = painterResource(id = iconRes),
-                contentDescription = null, // Decorative image, so null description is fine.
+                contentDescription = null, // Decorative image, so null description is fine
                 modifier = Modifier.size(100.dp)
             )
 
@@ -83,7 +83,7 @@ fun RoleSelectionCard(
                 fontSize = 22.sp
             )
 
-            // The helper description in standard black text.
+            // The helper description
             Text(
                 text = description,
                 color = Color.Black,

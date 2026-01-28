@@ -34,9 +34,9 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 /**
- * Home Screen displaying personalized greetings, upcoming lessons, and recommendations.
- * FIX: Now using LessonsViewModel directly for lessons to ensure instant updates.
- * SORTING UPDATE: Lessons are now sorted chronologically (Nearest date first).
+ * Home Screen displaying personalized greetings (user name dependent), upcoming lessons, and recommendations
+ * Using LessonsViewModel directly for lessons to ensure instant updates
+ * Lessons are sorted chronologically (Nearest date first)
  */
 @Composable
 fun HomeScreen(

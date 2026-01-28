@@ -15,8 +15,8 @@ import androidx.compose.ui.unit.*
 import com.example.studybuddies.R
 
 /**
- * Screen that allows the user to choose between being a Student or a Tutor.
- * This choice determines the profile layout and available features later in the app.
+ * Screen that allows the user to choose between being a Student or a Tutor
+ * This choice determines the profile layout and available features later in the app
  */
 @Composable
 fun RegistrationRoleScreen(
@@ -33,7 +33,7 @@ fun RegistrationRoleScreen(
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Top spacing for visual balance
+        // Top spacing
         Spacer(Modifier.height(40.dp))
 
         // Application Logo
@@ -107,8 +107,8 @@ fun RegistrationRoleScreen(
 }
 
 /**
- * Custom Card component representing a role choice.
- * Encapsulates design logic for the role selection buttons.
+ * Custom Card component representing a role choice
+ * Encapsulates design logic for the role selection buttons
  */
 @Composable
 fun SimpleRoleCard(

@@ -91,7 +91,7 @@ fun LoginScreen(
             ) {
                 Spacer(modifier = Modifier.height(60.dp))
 
-                // App Branding: Logo and Text
+                // Logo and Text of teh app
                 Image(
                     painter = painterResource(id = R.drawable.ic_logo),
                     contentDescription = null,
@@ -194,7 +194,7 @@ fun LoginScreen(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Footer: Navigate to Register screen using an AnnotatedString for mixed styling
+                // Footer: Navigate to Register screen using an AnnotatedString
                 Text(
                     text = buildAnnotatedString {
                         withStyle(style = SpanStyle(color = Color.Black)) {

@@ -14,8 +14,8 @@ import androidx.compose.material.icons.outlined.Search
 import androidx.compose.ui.graphics.vector.ImageVector
 
 /**
- * Navigation tabs for the bottom bar.
- * Using an enum is a clean way to avoid typos that happen with 'String' routes.
+ * Navigation tabs for the bottom bar
+ * Using an enum to avoid typos that happen with 'String'
  */
 enum class HomeTab {
     CHAT,
@@ -37,8 +37,8 @@ data class BottomNavItem(
 )
 
 /**
- * Configuration for the bottom navigation bar.
- * This list is looped through in the MainLayoutScreen to draw the UI.
+ * Configuration for the bottom navigation bar
+ * This list is looped through in the MainLayoutScreen to draw the UI
  */
 val BottomNavItems = listOf(
     BottomNavItem(

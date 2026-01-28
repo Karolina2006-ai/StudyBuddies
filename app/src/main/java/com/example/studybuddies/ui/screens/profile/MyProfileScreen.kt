@@ -25,8 +25,8 @@ import com.example.studybuddies.viewmodel.LessonsViewModel
 import com.example.studybuddies.viewmodel.AuthViewModel
 
 /**
- * Main Profile Screen: Displays user info, tutor dashboard, and availability.
- * Student perspective: I can see my details and navigate to edit them.
+ * Main Profile Screen: Displays user info, tutor dashboard, and availability
+ * Student perspective: I can see my details and navigate to edit them
  */
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -427,7 +427,7 @@ fun MyProfileScreen(
 }
 
 /**
- * Custom progress bar for the rating breakdown section.
+ * Custom progress bar for the rating breakdown section
  */
 @Composable
 fun RatingProgressBar(stars: Int, percentage: Int) {

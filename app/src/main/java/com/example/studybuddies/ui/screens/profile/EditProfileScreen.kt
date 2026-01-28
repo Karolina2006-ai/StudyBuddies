@@ -35,8 +35,7 @@ import com.example.studybuddies.data.model.User
 import com.example.studybuddies.viewmodel.AuthViewModel
 
 /**
- * Screen for editing user profile information including photo, biography, and academic interests.
- * Ensures strict color compliance (Black labels) and smooth interaction (no ripples).
+ * Screen for editing user profile information including photo, biography, and academic interests
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -235,7 +234,7 @@ fun EditProfileScreen(
 }
 
 /**
- * Reusable text field styled specifically for the profile editing screen.
+ * Reusable text field styled specifically for the profile editing screen
  */
 @Composable
 fun ProfileTextField(
@@ -273,7 +272,7 @@ fun ProfileTextField(
 }
 
 /**
- * Section for adding and displaying interactive tags (Chips) for subjects or hobbies.
+ * Section for adding and displaying interactive tags (Chips) for subjects or hobbies
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable

@@ -7,7 +7,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.graphics.Color
 
-// --- Material 3 Typography Configuration ---
 
 val Typography = Typography(
     // Screen Headers - Used for main titles at the top of each screen

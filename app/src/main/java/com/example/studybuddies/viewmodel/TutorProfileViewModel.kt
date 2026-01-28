@@ -10,9 +10,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 /**
- * Represents the various states of the Tutor Profile screen.
+ * Represents the various states of the Tutor Profile screen
  * Using a sealed class ensures the UI handles all scenarios (Loading, Success, Error)
- * and prevents invalid states.
+ * and prevents invalid states
  */
 sealed class ProfileUiState {
     object Loading : ProfileUiState()
@@ -31,7 +31,7 @@ class TutorProfileViewModel(
     val uiState: StateFlow<ProfileUiState> = _uiState.asStateFlow()
 
     /**
-     * Fetches a tutor's profile details from the repository based on their unique ID.
+     * Fetches a tutor's profile details from the repository based on their unique ID
      */
     fun loadTutor(tutorId: String) {
         viewModelScope.launch {

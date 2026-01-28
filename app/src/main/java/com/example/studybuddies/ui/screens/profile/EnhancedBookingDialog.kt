@@ -22,9 +22,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.studybuddies.viewmodel.LessonsViewModel
 
 /**
- * FINAL EMERGENCY REPAIR: Real-time Global Synchronization.
  * This version uses the Global StateFlow to ensure slots are blocked
- * and lessons appear INSTANTLY across all screens.
+ * and lessons appear INSTANTLY across all screens
  */
 @Composable
 fun EnhancedBookingDialog(

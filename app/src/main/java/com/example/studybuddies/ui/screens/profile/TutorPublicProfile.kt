@@ -537,7 +537,7 @@ fun TutorBookingDialog(
             }
         },
         confirmButton = {
-            // Confirm button only active if a time has been picked
+            // Confirming that a button only active if a time has been picked
             Button(
                 onClick = { if (selectedTime != null) onConfirm(dateStr, selectedTime!!, selectedSubject) },
                 enabled = selectedTime != null,

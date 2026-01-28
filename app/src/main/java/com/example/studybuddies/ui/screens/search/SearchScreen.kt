@@ -31,7 +31,7 @@ fun SearchScreen(
     viewModel: SearchViewModel, // ViewModel managing search results and filter logic
     onTutorClick: (String) -> Unit // Navigation callback when a tutor is selected
 ) {
-    // Observe the search state from the ViewModel
+    // Observing the search state from the ViewModel
     val uiState by viewModel.uiState.collectAsState()
     val logoBlue = Color(0xFF1A73E8) // Primary branding color
     val lightBlue = Color(0xFFEBF2FF) // Background color for search inputs

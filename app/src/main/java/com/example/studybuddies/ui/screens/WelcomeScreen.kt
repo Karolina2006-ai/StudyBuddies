@@ -21,8 +21,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
- * Professional Welcome Screen.
- * Updated: Text split into two lines, centered, with correct line height.
+ * Professional Welcome Screen
+ * Text split into two lines, centered
  */
 @Composable
 fun BlueWelcomeScreen(

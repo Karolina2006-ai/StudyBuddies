@@ -1,8 +1,8 @@
 package com.example.studybuddies.ui.screens.chat
 
 /**
- * Model representing a chat preview on the conversation list (Chats Screen).
- * Contains the ID which is essential for opening a specific conversation.
+ * Model representing a chat preview on the conversation list (Chats Screen)
+ * Contains the ID which is essential for opening a specific conversation
  */
 data class ChatData(
     val id: String = "", // Unique Firestore Document ID; used to route the user to the correct ChatDetailScreen

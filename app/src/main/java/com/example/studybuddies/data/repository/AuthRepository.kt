@@ -7,13 +7,13 @@ import kotlinx.coroutines.tasks.await
 
 /**
  * Repository handling user authentication with Firebase Auth
- * and profile data synchronization in Firestore.
+ * and profile data synchronization in Firestore
  */
 class AuthRepository(
-    private val auth: FirebaseAuth, // The service for login/register credentials.
-    private val firestore: FirebaseFirestore // The service for storing the user's profile info.
+    private val auth: FirebaseAuth, // The service for login/register credentials
+    private val firestore: FirebaseFirestore // The service for storing the user's profile info
 ) {
-    // Check if someone is already logged in so they don't have to see the login screen again.
+    // Check if someone is already logged in so they don't have to see the login screen again (when they just re-open the app after closing it)
     fun getCurrentUser(): FirebaseUser? = auth.currentUser
 
     /**
@@ -21,20 +21,20 @@ class AuthRepository(
      */
     suspend fun login(email: String, pass: String): Result<FirebaseUser> {
         return try {
-            // .await() turns the Firebase "Task" into a synchronous-looking call that doesn't block the UI thread.
+            // .await() turns the Firebase "Task" into a synchronous-looking call that doesn't block the UI thread (effective)
             val result = auth.signInWithEmailAndPassword(email, pass).await()
             val user = result.user
             if (user != null) Result.success(user)
             else Result.failure(Exception("Login failed: User is null"))
         } catch (e: Exception) {
-            // If the password is wrong or there's no internet, catch the error and return it.
+            // If the password is wrong or there's no internet, catch the error and return it
             Result.failure(e)
         }
     }
 
     /**
-     * Complete user registration.
-     * Creates an account in Firebase Auth, and then immediately creates a profile document in Firestore.
+     * Complete user registration
+     * Creates an account in Firebase Auth, and then immediately creates a profile document in Firestore
      */
     suspend fun register(
         email: String,
@@ -50,13 +50,13 @@ class AuthRepository(
         subjects: List<String> = emptyList()
     ): Result<FirebaseUser> {
         return try {
-            // Step 1: Create the "identity" in Firebase Authentication (Email/Password).
+            // Step 1: Create the "identity" in Firebase Authentication (Email/Password) (so the basic)
             val result = auth.createUserWithEmailAndPassword(email, pass).await()
             val user = result.user ?: return Result.failure(Exception("Registration failed: User is null"))
 
-            // Step 2: Prepare the "Profile" data.
-            // We do this because Firebase Auth only stores email/password, not things like 'city' or 'bio'.
-            val userData = hashMapOf(
+            // Step 2: Prepare the "Profile" data
+            // We do this because Firebase Auth only stores email/password, not things like 'city' or 'bio'
+            val userData = hashMapOf( // we use mapping
                 "uid" to user.uid,
                 "email" to email,
                 "firstName" to firstName,
@@ -70,15 +70,15 @@ class AuthRepository(
                 "hobbies" to hobbies,
                 "subjects" to subjects,
                 "averageRating" to 0.0,
-                "hourlyRate" to 50.0, // We give new tutors a default rate to start with.
+                "hourlyRate" to 50.0, // We give new tutors a default rate to start with, they can change it later
                 "totalReviews" to 0,
                 "ratingStats" to mapOf("5" to 0, "4" to 0, "3" to 0, "2" to 0, "1" to 0),
                 "reviews" to emptyList<Any>(),
                 "availability" to emptyMap<String, List<String>>()
             )
 
-            // Step 3: Write the profile document to the "users" collection in Firestore.
-            // We use user.uid as the document name to link Auth and Firestore perfectly.
+            // Step 3: Write the profile document to the "users" collection in Firestore
+            // We use user.uid as the document name to link Auth and Firestore
             firestore.collection("users").document(user.uid).set(userData).await()
 
             Result.success(user)
@@ -100,7 +100,7 @@ class AuthRepository(
     }
 
     /**
-     * Simple logout function.
+     * Simple logout function
      */
     fun logout() {
         auth.signOut()

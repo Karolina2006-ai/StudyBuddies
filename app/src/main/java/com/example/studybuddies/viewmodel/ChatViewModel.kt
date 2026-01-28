@@ -73,7 +73,7 @@ class ChatViewModel(
         viewModelScope.launch {
             try {
                 ChatRepository.sendMessage(chatId, text.trim())
-                // The Repository updates the Flow automatically upon successful send
+                // The Repository updates the Flow automatically when a message is successfully sent
             } catch (e: Exception) {
                 Log.e("ChatViewModel", "Error sending message: ${e.message}")
             }

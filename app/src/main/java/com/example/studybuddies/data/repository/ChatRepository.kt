@@ -14,37 +14,37 @@ import kotlinx.coroutines.tasks.await
 import java.util.UUID
 
 /**
- * Singleton object that manages all chat-related data.
- * Using an 'object' ensures we don't have multiple instances fighting over database listeners.
+ * Object that manages all chat-related data
+ * Using an 'object' ensures we don't have multiple instances
  */
 object ChatRepository {
 
     private val firestore = FirebaseFirestore.getInstance() // Direct access to the Firestore database
     private val auth = FirebaseAuth.getInstance() // Access to current user authentication state
 
-    // StateFlow acts like a 'live stream' of data.
-    // This map stores messages indexed by their ChatId, so switching chats is instant.
+    // StateFlow acts like a 'live stream' of data
+    // This map stores messages indexed by their ChatId, so switching chats is instant
     private val _messages = MutableStateFlow<Map<String, List<Message>>>(emptyMap())
     val messages: StateFlow<Map<String, List<Message>>> = _messages.asStateFlow()
 
-    // Holds the list of all conversations the user is currently involved in.
+    // Holds the list of all conversations the user is currently involved in
     private val _chats = MutableStateFlow<List<ChatData>>(emptyList())
     val chats: StateFlow<List<ChatData>> = _chats.asStateFlow()
 
-    // Entry point to start fetching data once we know who the user is.
+    // Entry point to start fetching data once we know who the user is
     fun initialize(userId: String) {
         loadChats(userId) // Start the real-time listener for the inbox
     }
 
     /**
-     * Sets up a real-time listener for the user's active chats.
-     * If someone sends a message, the list updates automatically without refreshing.
+     * Sets up a real-time listener for the user's active chats
+     * If someone sends a message, the list updates automatically without refreshing
      */
     fun loadChats(userId: String) {
         Log.d("ChatRepo", "Loading chats for user: $userId")
 
         firestore.collection("chats")
-            .whereArrayContains("participants", userId) // Finds any chat where I am a member.
+            .whereArrayContains("participants", userId) // Finds any chat where I am a member
             .addSnapshotListener { snapshot, e ->
                 if (e != null) {
                     Log.e("ChatRepo", "Listen failed.", e)
@@ -52,7 +52,7 @@ object ChatRepository {
                 }
 
                 if (snapshot != null) {
-                    // Sort by the newest message so the most active chat is at the top of the list.
+                    // Sort by the newest message so the most active chat is at the top of the list
                     val sortedDocs = snapshot.documents.sortedByDescending {
                         it.getLong("lastMessageTimestamp") ?: 0L
                     }
@@ -61,7 +61,7 @@ object ChatRepository {
                         val lastMsg = doc.getString("lastMessage") ?: "Start chatting"
                         val timestamp = doc.getLong("lastMessageTimestamp") ?: System.currentTimeMillis()
 
-                        // Logic to figure out the name of the 'other' person in the chat.
+                        // Logic to figure out the name of the 'other' person in the chat
                         val participants = doc.get("participants") as? List<String> ?: emptyList()
                         val otherUserId = participants.find { it != userId } ?: "Unknown"
 
@@ -72,12 +72,12 @@ object ChatRepository {
                             id = doc.id,
                             name = otherUserName,
                             message = lastMsg,
-                            time = formatTime(timestamp), // Convert the Long timestamp to a readable String.
+                            time = formatTime(timestamp), // Convert the Long timestamp to a readable String
                             unread = 0 // Defaulting to 0 for UI initialization
                         )
                     }
 
-                    _chats.value = chatList // Push the new list into the 'stream' for the UI to see.
+                    _chats.value = chatList // Push the new list into the 'stream' for the UI to see
                 }
             }
     }

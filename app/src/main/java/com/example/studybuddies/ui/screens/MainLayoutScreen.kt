@@ -20,9 +20,9 @@ import com.example.studybuddies.ui.navigation.StudyBuddiesNavHost
 import com.example.studybuddies.viewmodel.*
 
 /**
- * Main Layout Screen handling the Bottom Navigation and Scaffold structure.
- * Updated: Optimized to ensure the passed ViewModel instances are used
- * correctly across all nested navigation destinations for real-time sync.
+ * Main Layout Screen handling the Bottom Navigation and Scaffold structure
+ * Ensured that the passed ViewModel instances are used
+ * correctly across all nested navigation destinations for real-time sync
  */
 @Composable
 fun MainLayoutScreen(

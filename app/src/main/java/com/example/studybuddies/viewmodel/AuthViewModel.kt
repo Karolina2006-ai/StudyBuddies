@@ -235,7 +235,7 @@ class AuthViewModel(
         }
     }
 
-    // Standard logout: Clears Auth and resets local state to default
+    // Clears Auth and resets local state to default
     fun logout() {
         authRepository.logout()
         _authState.update { AuthState() }

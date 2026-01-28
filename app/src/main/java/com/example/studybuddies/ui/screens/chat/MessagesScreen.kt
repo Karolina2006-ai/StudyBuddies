@@ -20,8 +20,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.studybuddies.viewmodel.ChatViewModel
 
 /**
- * MessagesScreen - Displays a list of active conversations.
- * Handles the high-level list state and search/empty results.
+ * MessagesScreen - Displays a list of active conversations
+ * Handles the high-level list state and search/empty results
  */
 @Composable
 fun MessagesScreen(
@@ -50,7 +50,7 @@ fun MessagesScreen(
             modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)
         )
 
-        // Show a prompt if there are no messages; otherwise, show the list
+        // Show a prompt if there are no messages, otherwise, show the list
         if (chatList.isEmpty()) {
             EmptyMessagesPlaceholder()
         } else {
